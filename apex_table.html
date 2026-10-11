@@ -1,0 +1,67 @@
+<!-- Combined driver table. Keep apex_drivers.json in the same folder as the page. -->
+<style>
+.apx-wrap{overflow-x:auto;max-width:100%}
+.apx-table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+.apx-table th,.apx-table td{padding:8px 10px;text-align:left;border-bottom:1px solid #3a1a1a;white-space:nowrap}
+.apx-table th{background:#b3121b;color:#fff;cursor:pointer;position:sticky;top:0}
+.apx-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.apx-table th.num{text-align:right}
+.apx-search{margin:0 0 10px;padding:8px 10px;width:100%;max-width:320px}
+</style>
+<input id="apx-search" class="apx-search" placeholder="Search drivers">
+<div class="apx-wrap">
+<table class="apx-table" id="apx-table">
+ <thead><tr>
+  <th data-k="name">Driver</th>
+  <th data-k="level" class="num">UVS level</th>
+  <th data-k="netWorth" class="num">Net worth</th>
+  <th data-k="distanceKm" class="num">Distance</th>
+  <th data-k="jobKm" class="num">Last job</th>
+  <th data-k="jobTime">Time</th>
+  <th data-k="jobFuel" class="num">Fuel</th>
+  <th data-k="jobIncome" class="num">Income</th>
+  <th data-k="jobLevel">Level change</th>
+ </tr></thead>
+ <tbody></tbody>
+</table>
+</div>
+<script>
+(function(){
+ var rows=[],sortKey='netWorth',asc=false;
+ var dash='-';
+ function money(n){return n==null?dash:n>=1e6?'$'+(n/1e6).toFixed(1)+'M':'$'+(n/1e3).toFixed(1)+'k';}
+ function km(n){return n==null?dash:n>=1000?(n/1e3).toFixed(1)+'k km':n+' km';}
+ function flat(m){var j=m.job||{};return{
+  name:m.name,level:m.level,netWorth:m.netWorth,distanceKm:m.distanceKm,
+  jobKm:j.km==null?null:j.km,jobTime:j.time||null,jobFuel:j.fuelL==null?null:j.fuelL,
+  jobIncome:j.income==null?null:j.income,jobLevel:j.levelFrom?j.levelFrom+' to '+j.levelTo:null};}
+ function render(){
+  var q=document.getElementById('apx-search').value.toLowerCase();
+  var list=rows.filter(function(r){return r.name.toLowerCase().indexOf(q)>-1;});
+  list.sort(function(a,b){
+   var x=a[sortKey],y=b[sortKey];
+   if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
+   var c=typeof x==='string'?x.localeCompare(y):x-y;
+   return asc?c:-c;});
+  var body=document.querySelector('#apx-table tbody');
+  body.innerHTML='';
+  list.forEach(function(r){
+   var cells=[
+    [r.name,''],[r.level==null?dash:r.level,'num'],[money(r.netWorth),'num'],[km(r.distanceKm),'num'],
+    [r.jobKm==null?dash:r.jobKm+' km','num'],[r.jobTime||dash,''],
+    [r.jobFuel==null?dash:r.jobFuel+' l','num'],
+    [r.jobIncome==null?dash:'\u20AC'+r.jobIncome.toLocaleString('en-US'),'num'],[r.jobLevel||dash,'']];
+   var tr=document.createElement('tr');
+   cells.forEach(function(c){var td=document.createElement('td');td.textContent=c[0];if(c[1])td.className=c[1];tr.appendChild(td);});
+   body.appendChild(tr);});
+ }
+ document.querySelectorAll('#apx-table th').forEach(function(th){
+  th.addEventListener('click',function(){
+   var k=th.getAttribute('data-k');
+   if(sortKey===k){asc=!asc;}else{sortKey=k;asc=(k==='name');}
+   render();});});
+ document.getElementById('apx-search').addEventListener('input',render);
+ fetch('apex_drivers.json').then(function(r){return r.json();}).then(function(d){
+  rows=d.members.map(flat);render();});
+})();
+</script>

@@ -1,0 +1,442 @@
+{
+ "sources": "UVS level leaderboard (11 Oct 2026), net worth leaderboard (site), distance top 5 (22 Sep 2026), job log (site)",
+ "members": [
+  {
+   "name": "Corprate keem",
+   "level": 381,
+   "levelRank": 1,
+   "netWorth": 6100000,
+   "netWorthRank": 1,
+   "distanceKm": 214700,
+   "job": {
+    "km": 636,
+    "time": "9 h 45 m",
+    "fuelL": 0,
+    "income": 43229,
+    "levelFrom": 366,
+    "levelTo": 367
+   }
+  },
+  {
+   "name": "Gamer-y2b",
+   "level": 142,
+   "levelRank": 7,
+   "netWorth": 1800000,
+   "netWorthRank": 2,
+   "distanceKm": 86700,
+   "job": null
+  },
+  {
+   "name": "GENERAL",
+   "level": 50,
+   "levelRank": 20,
+   "netWorth": 1100000,
+   "netWorthRank": 3,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Tiash",
+   "level": 87,
+   "levelRank": 11,
+   "netWorth": 1100000,
+   "netWorthRank": 4,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Mezikis",
+   "level": 173,
+   "levelRank": 5,
+   "netWorth": 1000000,
+   "netWorthRank": 5,
+   "distanceKm": 49100,
+   "job": {
+    "km": 396,
+    "time": "7 h 24 m",
+    "fuelL": 233,
+    "income": 7249,
+    "levelFrom": 171,
+    "levelTo": 172
+   }
+  },
+  {
+   "name": "Peace",
+   "level": 57,
+   "levelRank": 17,
+   "netWorth": 733400,
+   "netWorthRank": 6,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "The-T",
+   "level": 47,
+   "levelRank": 22,
+   "netWorth": 566600,
+   "netWorthRank": 7,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Thechallenger",
+   "level": 74,
+   "levelRank": 13,
+   "netWorth": 450500,
+   "netWorthRank": 8,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Blaxthegamer092",
+   "level": 36,
+   "levelRank": 29,
+   "netWorth": 394800,
+   "netWorthRank": 9,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Niel",
+   "level": 56,
+   "levelRank": 18,
+   "netWorth": 394700,
+   "netWorthRank": 10,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "ReX",
+   "level": 60,
+   "levelRank": 15,
+   "netWorth": 337700,
+   "netWorthRank": 11,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Ronin",
+   "level": 24,
+   "levelRank": 33,
+   "netWorth": 158700,
+   "netWorthRank": 12,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Razael",
+   "level": 30,
+   "levelRank": 31,
+   "netWorth": 129500,
+   "netWorthRank": 13,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Hero",
+   "level": 278,
+   "levelRank": 2,
+   "netWorth": 127500,
+   "netWorthRank": 14,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Ghost",
+   "level": 29,
+   "levelRank": 32,
+   "netWorth": 111400,
+   "netWorthRank": 15,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "argenis0880",
+   "level": 182,
+   "levelRank": 4,
+   "netWorth": 105500,
+   "netWorthRank": 16,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "kjgamerz_",
+   "level": 22,
+   "levelRank": 35,
+   "netWorth": 70600,
+   "netWorthRank": 17,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Charles",
+   "level": 41,
+   "levelRank": 27,
+   "netWorth": 66100,
+   "netWorthRank": 18,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "AlmedinDriver",
+   "level": 11,
+   "levelRank": 42,
+   "netWorth": 59300,
+   "netWorthRank": 19,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "CachorrinDoMine",
+   "level": 17,
+   "levelRank": 36,
+   "netWorth": 51500,
+   "netWorthRank": 20,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Asad",
+   "level": null,
+   "levelRank": null,
+   "netWorth": 38000,
+   "netWorthRank": 21,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "kabir254",
+   "level": 63,
+   "levelRank": 14,
+   "netWorth": 34600,
+   "netWorthRank": 22,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "diamondego",
+   "level": 42,
+   "levelRank": 25,
+   "netWorth": 33500,
+   "netWorthRank": 23,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "dave",
+   "level": 22,
+   "levelRank": 34,
+   "netWorth": 31200,
+   "netWorthRank": 24,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "_hyperwolf",
+   "level": 108,
+   "levelRank": 9,
+   "netWorth": 24700,
+   "netWorthRank": 25,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "haky344",
+   "level": 43,
+   "levelRank": 24,
+   "netWorth": 20900,
+   "netWorthRank": 26,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Mechanic STAR",
+   "level": 15,
+   "levelRank": 37,
+   "netWorth": 18300,
+   "netWorthRank": 27,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "nosequenombreponer",
+   "level": 79,
+   "levelRank": 12,
+   "netWorth": 16400,
+   "netWorthRank": 28,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "VU",
+   "level": 90,
+   "levelRank": 10,
+   "netWorth": 14800,
+   "netWorthRank": 29,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "PHANTOM",
+   "level": 260,
+   "levelRank": 3,
+   "netWorth": 13800,
+   "netWorthRank": 30,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "season_22",
+   "level": null,
+   "levelRank": null,
+   "netWorth": 12600,
+   "netWorthRank": 31,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "king S",
+   "level": 9,
+   "levelRank": 43,
+   "netWorth": 12600,
+   "netWorthRank": 32,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "INF2.0 max",
+   "level": 8,
+   "levelRank": 44,
+   "netWorth": 12400,
+   "netWorthRank": 33,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Goku black",
+   "level": 142,
+   "levelRank": 8,
+   "netWorth": 9600,
+   "netWorthRank": 34,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "super_sunny_530",
+   "level": 38,
+   "levelRank": 28,
+   "netWorth": 8300,
+   "netWorthRank": 35,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "A_7HK",
+   "level": 53,
+   "levelRank": 19,
+   "netWorth": 8300,
+   "netWorthRank": 36,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Shaggy",
+   "level": 15,
+   "levelRank": 38,
+   "netWorth": 8100,
+   "netWorthRank": 37,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Ubaid Ullah",
+   "level": 41,
+   "levelRank": 26,
+   "netWorth": 8000,
+   "netWorthRank": 38,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "giorgio_7747",
+   "level": 58,
+   "levelRank": 16,
+   "netWorth": 7900,
+   "netWorthRank": 39,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "MrREX",
+   "level": 32,
+   "levelRank": 30,
+   "netWorth": 7600,
+   "netWorthRank": 40,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "krmmf_hsk",
+   "level": 45,
+   "levelRank": 23,
+   "netWorth": 6200,
+   "netWorthRank": 41,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "KAT",
+   "level": 8,
+   "levelRank": 45,
+   "netWorth": 5500,
+   "netWorthRank": 42,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "NightwingTIR",
+   "level": 150,
+   "levelRank": 6,
+   "netWorth": 4100,
+   "netWorthRank": 43,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "ghost.2.0",
+   "level": 48,
+   "levelRank": 21,
+   "netWorth": 3800,
+   "netWorthRank": 44,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "truckers_jarda_czech",
+   "level": 12,
+   "levelRank": 41,
+   "netWorth": 2700,
+   "netWorthRank": 45,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "c0smindnl",
+   "level": 14,
+   "levelRank": 39,
+   "netWorth": null,
+   "netWorthRank": null,
+   "distanceKm": null,
+   "job": null
+  },
+  {
+   "name": "Yusuf",
+   "level": 13,
+   "levelRank": 40,
+   "netWorth": null,
+   "netWorthRank": null,
+   "distanceKm": null,
+   "job": null
+  }
+ ]
+}
