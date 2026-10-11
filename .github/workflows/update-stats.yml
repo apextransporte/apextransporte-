@@ -18,6 +18,7 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
+          GEMINI_API_KEY:${{secrets.GEMINI_API_KEY}}
         run: python3 update_stats.py
 
       - name: Commit data.json if it changed
