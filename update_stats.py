@@ -1,32 +1,37 @@
-name: Update stats
+import os
+import json
+import requests
 
-on:
-workflow_dispatch:
-schedule:
-- cron: ‘0,30 0-23 1-31 1-12 0-6’
+token = os.environ[“DISCORD_BOT_TOKEN”]
+channel = os.environ[“DISCORD_STATS_CHANNEL_ID”]
 
-permissions:
-contents: write
+url = “https://discord.com/api/v10/channels/” + channel + “/messages?limit=20”
+headers = {“Authorization”: “Bot “ + token}
 
-jobs:
-update:
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
-- uses: actions/setup-python@v5
-with:
-python-version: ‘3.11’
-- run: pip install requests
-- name: Run script
-env:
-DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
-run: python update_stats.py
-- name: Save data
-run: |
-cat data.json
-git config user.name “github-actions”
-git config user.email “actions@github.com”
-git add data.json
-git diff --staged --quiet || git commit -m “Update stats”
-git push
+r = requests.get(url, headers=headers, timeout=30)
+print(“Status:”, r.status_code)
+print(r.text[:300])
+r.raise_for_status()
+messages = r.json()
+print(“Messages found:”, len(messages))
+
+try:
+with open(“data.json”, encoding="utf-8") as f:
+data = json.load(f)
+except Exception:
+data = {}
+
+for key in [“networth”, “drivers”, “hours”, “distance”, “runs”, “latest_job”]:
+data.setdefault(key, “”)
+
+if messages:
+first = messages[0]
+text = first.get(“content”, “”)
+if not text and first.get(“attachments”):
+text = “Screenshot posted”
+data[“latest_job”] = text
+
+with open(“data.json”, “w”, encoding="utf-8") as f:
+json.dump(data, f, ensure_ascii=False)
+
+print(“Saved:”, data)
