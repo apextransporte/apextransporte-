@@ -33,6 +33,7 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
+          MAX_SECONDS: "600"
         run: python update_stats.py
 
       - name: Save results
