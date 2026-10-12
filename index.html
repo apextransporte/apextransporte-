@@ -467,13 +467,22 @@ const APEX_FEED_URL = "";
     var el = cell(row, label);
     if (el && val && empty(el)) { el.textContent = val; if (note) el.title = note; }
   }
+  function put(row, label, val, note) {
+    var el = cell(row, label);
+    if (el && val) { el.textContent = val; if (note) el.title = note; }
+  }
   function apply(row, m) {
-    fill(row, "Total distance", m.distance, "Total from job log screenshots");
-    fill(row, "Last job", m.last_km);
-    fill(row, "Time", m.last_time);
-    fill(row, "Income", m.last_income);
-    fill(row, "Level", m.last_level);
+    put(row, "Total distance", m.distance, "Total from job log screenshots");
+    put(row, "Last job", m.last_km);
+    put(row, "Time", m.last_time);
+    put(row, "Fuel", m.last_fuel);
+    put(row, "Income", m.last_income);
+    put(row, "Level", m.last_level);
     fill(row, "Net worth", m.networth);
+  }
+  function setStat(key, val) {
+    var el = document.querySelector('[data-stat="' + key + '"] b');
+    if (el && val) el.textContent = val;
   }
   function newRow(name) {
     var row = document.createElement("div");
@@ -537,6 +546,10 @@ const APEX_FEED_URL = "";
   fetch("data.json?v=" + Date.now(), { cache: "no-store" })
     .then(function (r) { return r.json(); })
     .then(function (d) {
+      setStat("activeDrivers", d.drivers);
+      setStat("totalDistanceKm", d.distance);
+      setStat("drivingTimeMinutes", d.hours);
+      setStat("totalRuns", d.runs);
       var table = document.getElementById("jobsTable");
       if (!table) return;
       var members = Array.isArray(d.members) ? d.members : [];
