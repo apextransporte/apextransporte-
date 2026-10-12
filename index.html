@@ -555,8 +555,16 @@ const APEX_FEED_URL = "";
       var members = Array.isArray(d.members) ? d.members : [];
       var byName = {};
       members.forEach(function (m) { byName[norm(m.name)] = m; });
+      var ALIASES = {
+        "blaxthegamer092": "APEX | \u026Es\u2295Blaxthegamer",
+        "rex": "REX \ud83c\uddf9\ud83c\uddf7",
+        "ronin": "R\u00f8\u014b\u0131\u014b_ \u2070\u2070\u20708",
+        "asad": "\u13aa\u1d18\u1d07x | \u13aas\u1d00\u1d05\u4e97"
+      };
       function find(name) {
         var n = norm(name);
+        var al = ALIASES[norm2(name)];
+        if (al && byName[norm(al)]) return byName[norm(al)];
         if (byName[n]) return byName[n];
         if (n.length < 4) return null;
         for (var k in byName) { if (k.length >= 4 && (k.indexOf(n) > -1 || n.indexOf(k) > -1)) return byName[k]; }
@@ -567,7 +575,7 @@ const APEX_FEED_URL = "";
         var name = row.querySelector("b").textContent;
         known[norm(name)] = true;
         var m = find(name);
-        if (m) apply(row, m);
+        if (m) { apply(row, m); known[norm(m.name)] = true; }
       });
       var crew = [].slice.call(document.querySelectorAll("#dlist .dcard b")).map(function (b) { return b.textContent.trim(); });
       members.forEach(function (m) { crew.push(m.name); });
