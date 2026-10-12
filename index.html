@@ -308,7 +308,7 @@ footer a{margin-right:18px}
     <h2>Meet the crew</h2>
     <p class="sub" style="margin-bottom:8px">The staff who run Apex Transporte and the drivers on the road.</p>
     <p class="sub"><b>Total staff on board: 12</b></p>
-    <div class="ranks"><div class="rank"><b>Founder</b><div class="chips"><span class="chip">Apex_ReX</span></div></div><div class="rank"><b>CEO</b><div class="chips"><span class="chip">Corprate keem</span></div></div><div class="rank"><b>Vice CEO</b><div class="chips"><span class="chip">The Sunny</span></div></div><div class="rank"><b>Manager</b><div class="chips"><span class="chip">Niel</span></div></div><div class="rank"><b>Upper management</b><div class="chips"><span class="chip">ReX</span><span class="chip">Corprate keem</span><span class="chip">Niel</span><span class="chip">The Sunny</span></div></div><div class="rank"><b>Moderator</b><div class="chips"><span class="chip">Rønin</span><span class="chip">General</span></div></div><div class="rank"><b>Support team</b><div class="chips"><span class="chip">The-T</span><span class="chip">Goku black</span></div></div><div class="rank"><b>Skin team</b><div class="chips"><span class="chip">Apex_ReX</span><span class="chip">Razael</span><span class="chip">VU</span><span class="chip">sbuda 101</span></div></div><div class="rank"><b>Social Media Manager</b><div class="chips"><span class="chip">Asad</span></div></div></div>
+    <div class="staff"><p class="stier">Leadership</p><div class="sgrid lead"><div class="scard" data-name="Apex_ReX"><span class="sav" aria-hidden="true">A</span><div class="sbody"><b class="sname">Apex_ReX</b><div class="sroles"><span class="rl main">Founder</span><span class="rl">Upper management</span><span class="rl">Skin team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="Corprate keem"><span class="sav" aria-hidden="true">C</span><div class="sbody"><b class="sname">Corprate keem</b><div class="sroles"><span class="rl main">CEO</span><span class="rl">Upper management</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="The Sunny"><span class="sav" aria-hidden="true">T</span><div class="sbody"><b class="sname">The Sunny</b><div class="sroles"><span class="rl main">Vice CEO</span><span class="rl">Upper management</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="Niel"><span class="sav" aria-hidden="true">N</span><div class="sbody"><b class="sname">Niel</b><div class="sroles"><span class="rl main">Manager</span><span class="rl">Upper management</span></div><small class="sdist" hidden></small></div></div></div><p class="stier">Team</p><div class="sgrid"><div class="scard" data-name="Rønin"><span class="sav" aria-hidden="true">R</span><div class="sbody"><b class="sname">Rønin</b><div class="sroles"><span class="rl main">Moderator</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="General"><span class="sav" aria-hidden="true">G</span><div class="sbody"><b class="sname">General</b><div class="sroles"><span class="rl main">Moderator</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="The-T"><span class="sav" aria-hidden="true">T</span><div class="sbody"><b class="sname">The-T</b><div class="sroles"><span class="rl main">Support team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="Goku black"><span class="sav" aria-hidden="true">G</span><div class="sbody"><b class="sname">Goku black</b><div class="sroles"><span class="rl main">Support team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="Razael"><span class="sav" aria-hidden="true">R</span><div class="sbody"><b class="sname">Razael</b><div class="sroles"><span class="rl main">Skin team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="VU"><span class="sav" aria-hidden="true">V</span><div class="sbody"><b class="sname">VU</b><div class="sroles"><span class="rl main">Skin team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="sbuda 101"><span class="sav" aria-hidden="true">S</span><div class="sbody"><b class="sname">sbuda 101</b><div class="sroles"><span class="rl main">Skin team</span></div><small class="sdist" hidden></small></div></div><div class="scard" data-name="Asad"><span class="sav" aria-hidden="true">A</span><div class="sbody"><b class="sname">Asad</b><div class="sroles"><span class="rl main">Social Media Manager</span></div><small class="sdist" hidden></small></div></div></div></div>
     <h3 class="dh">Driver directory</h3>
     <div class="dbar">
       <label for="dq">Search drivers</label>
@@ -836,6 +836,52 @@ const APEX_FEED_URL = "";
   render();
   setTimeout(render, 1800);
   setTimeout(render, 4800);
+})();
+</script>
+<style>
+.stier{font-family:var(--head);font-weight:800;font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 10px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.scard{display:flex;gap:14px;align-items:flex-start;border:3px solid var(--edge);background:var(--paper);padding:14px 16px;min-width:0}
+.sgrid.lead .scard{border-left:8px solid var(--red)}
+.sav{flex:none;width:46px;height:46px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:var(--head);font-weight:800;font-size:26px}
+.sgrid.lead .sav{background:var(--red);color:#fff}
+.sbody{min-width:0}
+.sname{display:block;font-family:var(--head);font-weight:800;font-size:26px;line-height:1.1;overflow-wrap:anywhere}
+.sroles{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.rl{font-size:12px;font-weight:700;border:2px solid var(--edge);padding:1px 8px;color:var(--ink)}
+.rl.main{background:var(--red);border-color:var(--red);color:#fff}
+.sdist{display:block;margin-top:8px;color:var(--muted);font-size:13px}
+</style>
+<script>
+(function () {
+  var table = document.getElementById("jobsTable");
+  var cards = [].slice.call(document.querySelectorAll(".scard"));
+  if (!table || !cards.length) return;
+  function n2(s) {
+    return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u00f8/gi, "o")
+      .toLowerCase().replace(/^apex_/, "").replace(/[^a-z0-9]/g, "");
+  }
+  function fill() {
+    var rows = {};
+    [].slice.call(table.querySelectorAll(".jr:not(.hd)")).forEach(function (r) {
+      var b = r.querySelector("b");
+      if (b) rows[n2(b.textContent)] = r;
+    });
+    cards.forEach(function (c) {
+      var r = rows[n2(c.getAttribute("data-name"))];
+      var el = r && r.querySelector('[data-l="Total distance"]');
+      var t = el ? el.textContent.trim() : "";
+      var d = c.querySelector(".sdist");
+      if (/\d/.test(t)) { d.textContent = t + " driven"; d.hidden = false; }
+      else { d.hidden = true; }
+    });
+  }
+  var timer;
+  new MutationObserver(function () { clearTimeout(timer); timer = setTimeout(fill, 400); })
+    .observe(table, { childList: true, subtree: true, characterData: true });
+  fill();
+  setTimeout(fill, 1800);
+  setTimeout(fill, 4800);
 })();
 </script>
 </body>
