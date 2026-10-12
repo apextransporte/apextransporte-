@@ -84,6 +84,9 @@ def main():
         entry = {
             "id": m["user"]["id"],
             "name": display_name(m),
+            "username": m["user"]["username"],
+            "global_name": m["user"].get("global_name"),
+            "nick": m.get("nick"),
             "avatar": avatar_url(m),
             "joined": m.get("joined_at"),
         }
