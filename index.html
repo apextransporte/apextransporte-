@@ -599,5 +599,134 @@ const APEX_FEED_URL = "";
     .then(loadApex);
 })();
 </script>
+<style>
+.sortbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.sortbar button{font:inherit;font-size:14px;font-weight:600;color:var(--ink);background:transparent;border:2px solid var(--edge);border-radius:999px;padding:6px 16px;cursor:pointer}
+.sortbar button[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+.jr:not(.hd) b[data-rank]::before{content:attr(data-rank);display:inline-block;min-width:1.6em;margin-right:6px;font-size:16px;font-weight:700;color:var(--red)}
+.jr .nd{font-size:0}
+.jr .nd::after{content:"No data yet";font-size:13px;font-weight:400;color:var(--muted)}
+.jr.sparse b::after{content:"No data yet";display:block;font-family:var(--body);font-size:13px;font-weight:400;color:var(--muted)}
+@media (max-width:800px){.jr .nd{display:none}}
+.livedot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2fd06b;margin-right:8px;vertical-align:1px;animation:lv 2s ease-in-out infinite}
+@keyframes lv{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.livedot{animation:none}}
+</style>
+<script>
+(function () {
+  var table = document.getElementById("jobsTable");
+  var search = document.getElementById("jobSearch");
+  if (!table || !search) return;
+  var mode = "distance";
+  var DASH = "\u2014";
+
+  function num(t) {
+    var m = String(t || "").match(/([\d.,]+)(?:\s*([kKmM])(?![a-zA-Z]))?/);
+    if (!m) return -1;
+    var v = parseFloat(m[1].replace(/,/g, ""));
+    if (isNaN(v)) return -1;
+    if (m[2] === "k" || m[2] === "K") v *= 1e3;
+    if (m[2] === "m" || m[2] === "M") v *= 1e6;
+    return v;
+  }
+  function val(row, label) {
+    var el = row.querySelector('[data-l="' + label + '"]');
+    return el ? el.textContent.trim() : "";
+  }
+  function key(row) {
+    if (mode === "level") { var u = num(val(row, "UVS level")); return u >= 0 ? u : num(val(row, "Level")); }
+    if (mode === "income") return num(val(row, "Income"));
+    if (mode === "networth") return num(val(row, "Net worth"));
+    return num(val(row, "Total distance"));
+  }
+
+  var bar = document.createElement("div");
+  bar.className = "sortbar";
+  [["distance", "Distance"], ["level", "Level"], ["income", "Income"], ["networth", "Net worth"]].forEach(function (o) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = o[1];
+    b.setAttribute("data-mode", o[0]);
+    b.setAttribute("aria-pressed", o[0] === mode ? "true" : "false");
+    b.addEventListener("click", function () {
+      mode = o[0];
+      [].slice.call(bar.children).forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      enhance();
+    });
+    bar.appendChild(b);
+  });
+  search.parentNode.insertBefore(bar, table);
+
+  var obs = new MutationObserver(function () { clearTimeout(timer); timer = setTimeout(enhance, 250); });
+  var timer;
+  function watch() { obs.observe(table, { childList: true, subtree: true, characterData: true }); }
+
+  function enhance() {
+    obs.disconnect();
+    var rows = [].slice.call(table.querySelectorAll(".jr:not(.hd)"));
+    rows.sort(function (a, b) { return key(b) - key(a); });
+    rows.forEach(function (r, i) {
+      table.appendChild(r);
+      var name = r.querySelector("b");
+      if (name) name.setAttribute("data-rank", String(i + 1));
+      var empty = 0;
+      [].slice.call(r.querySelectorAll("span")).forEach(function (sp) {
+        var isDash = sp.textContent.trim() === DASH;
+        sp.classList.toggle("nd", isDash);
+        if (isDash) empty++;
+      });
+      r.classList.toggle("sparse", empty >= 5);
+    });
+    watch();
+  }
+  watch();
+  setTimeout(enhance, 1200);
+  setTimeout(enhance, 4000);
+
+  function ago(d) {
+    var s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+    if (s < 90) return "just now";
+    var m = Math.round(s / 60);
+    if (m < 60) return m + " minutes ago";
+    var h = Math.round(m / 60);
+    if (h < 48) return h + (h === 1 ? " hour ago" : " hours ago");
+    var dd = Math.round(h / 24);
+    return dd + " days ago";
+  }
+  fetch("data.json?v=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var el = document.getElementById("statSrc");
+      var dt = d.latest_date ? new Date(d.latest_date) : null;
+      if (el && dt && !isNaN(dt)) {
+        el.innerHTML = '<span class="livedot" aria-hidden="true"></span>Live from our Discord. Latest job ' + ago(dt) + ".";
+      }
+    })
+    .catch(function () {});
+
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  ["activeDrivers", "totalDistanceKm", "drivingTimeMinutes", "totalRuns"].forEach(function (k) {
+    var el = document.querySelector('[data-stat="' + k + '"] b');
+    if (!el || reduce) return;
+    var done = false;
+    var so = new MutationObserver(function () {
+      if (done) return;
+      var m = el.textContent.match(/^([\d,]+)(.*)$/);
+      if (!m) return;
+      done = true;
+      so.disconnect();
+      var target = parseInt(m[1].replace(/,/g, ""), 10), rest = m[2], t0 = null;
+      function step(ts) {
+        if (t0 === null) t0 = ts;
+        var p = Math.min(1, (ts - t0) / 900);
+        el.textContent = Math.round(target * p).toLocaleString("en-US") + rest;
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+    so.observe(el, { childList: true, characterData: true, subtree: true });
+  });
+})();
+</script>
 </body>
 </html>
