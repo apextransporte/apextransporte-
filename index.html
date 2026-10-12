@@ -236,14 +236,13 @@ footer a{margin-right:18px}
       <div class="bar"><span>Welcome, driver</span><span>Truckers of Europe 3</span></div>
       <div class="stamp" aria-hidden="true">Verified<br>VTC</div>
       <div class="top">
-        <h1>Welcome to Apex Transporte</h1>
+        <h1>Welcome to <span class="hl">Apex Transporte</span></h1>
         <p>We are a Turkish virtual trucking crew driving across Türkiye and Continental Europe. We build more than a convoy. We build a family of drivers who turn solo runs into shared memories.</p>
       </div>
       <div class="fields">
         <div><small>Pickup</small><b>Türkiye</b></div>
         <div><small>Delivery</small><b>Continental Europe</b></div>
         <div><small>Cargo</small><b>Shared memories</b></div>
-        <div><small>Status</small><b>Verified</b></div>
       </div>
       <div class="tear">
         <span>Your seat in the convoy is waiting.</span>
@@ -262,14 +261,9 @@ footer a{margin-right:18px}
       <div><dt>Crew</dt><dd>Turkish VTC</dd></div>
       <div><dt>Routes</dt><dd>Europe</dd></div>
       <div><dt>Game</dt><dd>Truckers of Europe 3</dd></div>
-      <div><dt>Status</dt><dd>Verified</dd></div>
     </dl>
   </div>
-  <div class="wrap"><div class="trio">
-    <div><h3>Validated VTC</h3><p>Verified status and a clean, respectful space.</p></div>
-    <div><h3>Growing community</h3><p>New drivers join the family week after week.</p></div>
-    <div><h3>Friendly staff</h3><p>Every member gets respect and a drama-free server.</p></div>
-  </div></div></section>
+</section>
 
   <section id="stats"><div class="wrap">
     <h2>Our numbers</h2>
@@ -894,6 +888,16 @@ const APEX_FEED_URL = "";
 .route li{counter-increment:st}
 .route li::before{content:counter(st);display:grid;place-items:center;color:#fff;font-family:var(--head);font-weight:800;font-size:18px;line-height:1}
 .route small{display:none}
+</style>
+<style>
+.slip{border-top:8px solid var(--red)}
+.slip h1 .hl{color:var(--red)}
+.fields{grid-template-columns:repeat(3,1fr)}
+.fields b{letter-spacing:.01em}
+.tear{background:linear-gradient(0deg,transparent,transparent)}
+dl.notes div{align-items:baseline}
+dl.notes dt{color:var(--muted)}
+dl.notes dd{margin:0;font-weight:600;text-align:right}
 </style>
 </body>
 </html>
