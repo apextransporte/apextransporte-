@@ -13,7 +13,7 @@ from scipy import ndimage
 import pytesseract
 
 API = "https://discord.com/api/v10"
-MAX_MESSAGES = 3000
+MAX_MESSAGES = 300
 MAX_SECONDS = int(os.environ.get("MAX_SECONDS", "1500"))
 SCHEMA = 3
 
