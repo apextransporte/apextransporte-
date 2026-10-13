@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+import urllib.parse
 from collections import Counter
 
 import numpy as np
@@ -28,7 +29,26 @@ FIXED_BOXES = {
 NAMES = [["distance", "time", "fuel"], ["damage", "time_penalty", "income"]]
 VARIANTS = [(4, "auto"), (4, "bin135"), (6, "bin160"), (3, "auto"), (6, "auto"), (5, "bin135"),
             (3, "bin160"), (4, "bin160"), (6, "bin135")]
-
+REACTION = "✅"
+def already_reacted(message):
+for reaction in message.get("reactions", []):
+if reaction["me"] and reaction["emoji"]["name"] == REACTION.split(":")[0]:
+return True
+return False
+def react_to_message(message):
+if already_reacted(message):
+return
+emoji = urllib.parse.quote(REACTION)
+url = f"{API}/channels/{JOBLOG_CHANNEL_ID}/messages/{message['id']}/reactions/{emoji}/@me"
+while True:
+r = requests.put(url, headers=HEADERS)
+if r.status_code == 429:
+time.sleep(r.json().get("retry_after", 1))
+continue
+break
+if r.status_code != 204:
+print("Reaction failed", message["id"], r.status_code, r.text)
+time.sleep(0.4)
 
 # ---------- layout detection ----------
 
