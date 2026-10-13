@@ -441,24 +441,14 @@ def main():
 
     messages = fetch_messages(token, channel)
     print("Messages found:", len(messages))
-    for msg in messages:
-    if time.time() - started > MAX_SECONDS / 3:
-        break
-    if any(is_image(att) for att in msg.get("attachments", [])):
-        if not react_to_message(msg, token, channel):
-            break
+    results = [react_to_message(m, token, channel) for m in messages if time.time() - started < MAX_SECONDS / 3 and any(is_image(a) for a in m.get("attachments", []))]
+    print("Reactions added:", sum(1 for r in results if r is not None and r.status_code == 204), "Failed:", sum(1 for r in results if r is not None and r.status_code != 204))
             
     # React to every job log post with an image, newest first
     
     if time.time() - started > MAX_SECONDS / 3:
         break
     if any(is_image(att) for att in msg.get("attachments", [])):
-        if not react_to_message(msg, token, channel):
-        
-    # Jobs from an older version stay in the file until they are read again with the new fields
-    jobs = load_json("jobs.json", [])
-    index = {j["id"]: i for i, j in enumerate(jobs)}
-    current = {j["id"] for j in jobs if j.get("v") == SCHEMA}
 
     out_of_time = False
     # Oldest first so the newest job ends up last
