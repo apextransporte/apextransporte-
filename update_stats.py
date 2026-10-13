@@ -32,24 +32,29 @@ VARIANTS = [(4, "auto"), (4, "bin135"), (6, "bin160"), (3, "auto"), (6, "auto"),
 REACTION = "✅"
 def already_reacted(message):
 for reaction in message.get("reactions", []):
-if reaction["me"] and reaction["emoji"]["name"] == REACTION.split(":")[0]:
+if reaction.get("me") and reaction["emoji"]["name"] == REACTION.split(":")[0]:
 return True
 return False
-def react_to_message(message):
+def react_to_message(message, token, channel):
+"""Returns False when the bot lacks permission, so the loop stops."""
 if already_reacted(message):
-return
+return True
 emoji = urllib.parse.quote(REACTION)
-url = f"{API}/channels/{JOBLOG_CHANNEL_ID}/messages/{message['id']}/reactions/{emoji}/@me"
-while True:
-r = requests.put(url, headers=HEADERS)
+url = API + "/channels/" + channel + "/messages/" + message["id"] + "/reactions/" + emoji + "/@me"
+headers = {"Authorization": "Bot " + token}
+for _ in range(5):
+r = requests.put(url, headers=headers, timeout=30)
 if r.status_code == 429:
-time.sleep(r.json().get("retry_after", 1))
+time.sleep(float(r.json().get("retry_after", 1)) + 0.5)
 continue
 break
+if r.status_code == 403:
+print("Reaction blocked, give the bot Add Reactions and Read Message History")
+return False
 if r.status_code != 204:
-print("Reaction failed", message["id"], r.status_code, r.text)
+print("Reaction failed", message["id"], r.status_code)
 time.sleep(0.4)
-
+return True
 # ---------- layout detection ----------
 
 def find_boxes(mn, w_img, h_img):
@@ -458,7 +463,20 @@ def main():
 
     messages = fetch_messages(token, channel)
     print("Messages found:", len(messages))
-
+    for msg in messages:
+    if time.time() - started > MAX_SECONDS / 3:
+        break
+    if any(is_image(att) for att in msg.get("attachments", [])):
+        if not react_to_message(msg, token, channel):
+            break
+            
+    # React to every job log post with an image, newest first
+    
+    if time.time() - started > MAX_SECONDS / 3:
+        break
+    if any(is_image(att) for att in msg.get("attachments", [])):
+        if not react_to_message(msg, token, channel):
+        
     # Jobs from an older version stay in the file until they are read again with the new fields
     jobs = load_json("jobs.json", [])
     index = {j["id"]: i for i, j in enumerate(jobs)}
