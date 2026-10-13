@@ -1,6 +1,6 @@
 {
-  "member_count": 46,
-  "visitor_count": 11,
+  "member_count": 47,
+  "visitor_count": 10,
   "members": [
     {
       "id": "883723046320484362",
@@ -154,6 +154,15 @@
       "nick": null,
       "avatar": "https://cdn.discordapp.com/avatars/762191509906391041/c8d0674de2a7dd83cf909ef45dde7fbf.png?size=128",
       "joined": "2026-01-08T02:12:00.268000+00:00"
+    },
+    {
+      "id": "1512504508930855062",
+      "name": "APEX | Kretek",
+      "username": "ryd_263",
+      "global_name": "Kretek",
+      "nick": "APEX | Kretek",
+      "avatar": null,
+      "joined": "2026-10-13T01:24:46.014000+00:00"
     },
     {
       "id": "1485622384630300782",
@@ -337,9 +346,9 @@
     },
     {
       "id": "1055404435905466418",
-      "name": "MrREX",
+      "name": "MrRex",
       "username": "beastyrex",
-      "global_name": "MrREX",
+      "global_name": "MrRex",
       "nick": null,
       "avatar": "https://cdn.discordapp.com/avatars/1055404435905466418/234d9ab60e867a5b2347c016701279b2.png?size=128",
       "joined": "2026-09-06T15:30:43.134000+00:00"
@@ -462,15 +471,6 @@
       "nick": null,
       "avatar": "https://cdn.discordapp.com/avatars/1457546936063361097/5445ffd7ffb201a98393cbdf684ea4b1.png?size=128",
       "joined": "2026-01-05T02:06:00.348000+00:00"
-    },
-    {
-      "id": "1512504508930855062",
-      "name": "Kretek",
-      "username": "ryd_263",
-      "global_name": "Kretek",
-      "nick": null,
-      "avatar": null,
-      "joined": "2026-10-13T01:24:46.014000+00:00"
     },
     {
       "id": "1276846780016758835",
