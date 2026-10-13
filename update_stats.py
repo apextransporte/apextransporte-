@@ -30,31 +30,9 @@ NAMES = [["distance", "time", "fuel"], ["damage", "time_penalty", "income"]]
 VARIANTS = [(4, "auto"), (4, "bin135"), (6, "bin160"), (3, "auto"), (6, "auto"), (5, "bin135"),
             (3, "bin160"), (4, "bin160"), (6, "bin135")]
 REACTION = "✅"
-def already_reacted(message):
-for reaction in message.get("reactions", []):
-if reaction.get("me") and reaction["emoji"]["name"] == REACTION.split(":")[0]:
-return True
-return False
-def react_to_message(message, token, channel):
-"""Returns False when the bot lacks permission, so the loop stops."""
-if already_reacted(message):
-return True
-emoji = urllib.parse.quote(REACTION)
-url = API + "/channels/" + channel + "/messages/" + message["id"] + "/reactions/" + emoji + "/@me"
-headers = {"Authorization": "Bot " + token}
-for _ in range(5):
-r = requests.put(url, headers=headers, timeout=30)
-if r.status_code == 429:
-time.sleep(float(r.json().get("retry_after", 1)) + 0.5)
-continue
-break
-if r.status_code == 403:
-print("Reaction blocked, give the bot Add Reactions and Read Message History")
-return False
-if r.status_code != 204:
-print("Reaction failed", message["id"], r.status_code)
-time.sleep(0.4)
-return True
+def already_reacted(message): return any(x.get("me") and x["emoji"]["name"] == REACTION.split(":")[0] for x in message.get("reactions", []))
+def put_reaction(url, token, tries=5): return (lambda r: put_reaction(url, token, tries - 1) if (r.status_code == 429 and tries > 0 and not time.sleep(float(r.json().get("retry_after", 1)) + 0.5)) else r)(requests.put(url, headers={"Authorization": "Bot " + token}, timeout=30))
+def react_to_message(message, token, channel): return None if already_reacted(message) else (time.sleep(0.4) or put_reaction(API + "/channels/" + channel + "/messages/" + message["id"] + "/reactions/" + urllib.parse.quote(REACTION) + "/@me", token))
 # ---------- layout detection ----------
 
 def find_boxes(mn, w_img, h_img):
