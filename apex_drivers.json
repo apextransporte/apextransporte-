@@ -1,0 +1,75 @@
+{
+  "sources": "net worth leaderboard (site), distance top 5 (22 Sep 2026), job log (site)",
+  "members": [
+    {
+      "name": "Corprate keem",
+      "netWorth": 6100000,
+      "netWorthRank": 1,
+      "distanceKm": 214700,
+      "job": {
+        "km": 636,
+        "time": "9 h 45 m",
+        "fuelL": 0,
+        "income": 43229,
+        "levelFrom": 366,
+        "levelTo": 367
+      }
+    },
+    {
+      "name": "Tiash",
+      "netWorth": 1100000,
+      "netWorthRank": 4,
+      "distanceKm": null,
+      "job": null
+    },
+    {
+      "name": "Mezikis",
+      "netWorth": 1000000,
+      "netWorthRank": 5,
+      "distanceKm": 49100,
+      "job": {
+        "km": 396,
+        "time": "7 h 24 m",
+        "fuelL": 233,
+        "income": 7249,
+        "levelFrom": 171,
+        "levelTo": 172
+      }
+    },
+    {
+      "name": "Razael",
+      "netWorth": 129500,
+      "netWorthRank": 13,
+      "distanceKm": null,
+      "job": null
+    },
+    {
+      "name": "AlmedinDriver",
+      "netWorth": 59300,
+      "netWorthRank": 19,
+      "distanceKm": null,
+      "job": null
+    },
+    {
+      "name": "Shaggy",
+      "netWorth": 8100,
+      "netWorthRank": 37,
+      "distanceKm": null,
+      "job": null
+    },
+    {
+      "name": "MrREX",
+      "netWorth": 7600,
+      "netWorthRank": 40,
+      "distanceKm": null,
+      "job": null
+    },
+    {
+      "name": "Yusuf",
+      "netWorth": null,
+      "netWorthRank": null,
+      "distanceKm": null,
+      "job": null
+    }
+  ]
+}
