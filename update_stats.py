@@ -13,7 +13,20 @@ from scipy import ndimage
 import pytesseract
 
 from net_worth import estimate_net_worth, find_net_worth, fmt_money
+from post_joblog import send_joblog
 
+MIN_POST_ID = 1559717373542400000
+def post_once(job, message_id, state):
+posted = state.setdefault("posted_ids", [])
+if int(message_id) <= MIN_POST_ID:
+return
+if str(message_id) in posted:
+return
+try:
+send_joblog(job)
+posted.append(str(message_id))
+except Exception as error:
+print("Post failed:", error)
 API = "https://discord.com/api/v10"
 MAX_MESSAGES = 300
 MAX_SECONDS = int(os.environ.get("MAX_SECONDS", "1500"))
