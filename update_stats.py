@@ -408,6 +408,30 @@ def sanitize(job):
         job.pop("check", None)
 
 
+def read_fuel(mn, box, km):
+    """Only readings that match the distance count in the vote, so garbage never wins.
+    Pass 1 reads the text with its unit. Pass 2 reads digits only. Returns 0 when nothing fits."""
+    crop = inner(mn, box)
+    def fits(v):
+        return fix_fuel(v, km) if v else None
+
+    value = vote(crop, lambda t: fits(parse_fuel(t)))
+    if value:
+        return value
+    digits_cfg = "--psm 7 -c tessedit_char_whitelist=0123456789lL"
+    value = vote(crop, lambda t: fits(to_int(re.sub(r"[lL]$", "", t.strip()))), config=digits_cfg)
+    if value:
+        return value
+    # Wider crop in case the value touches the box edge
+    x1, y1, x2, y2 = [int(v) for v in box]
+    w, h = x2 - x1, y2 - y1
+    wide = mn[y1 + int(0.05 * h): y2 - int(0.05 * h), x1 + int(0.08 * w): x2 - int(0.08 * w)]
+    value = vote(wide, lambda t: fits(parse_fuel(t)))
+    if not value:
+        print("Fuel not read for a job with", km, "km")
+    return value or 0
+
+
 def parse_job(image_bytes):
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     arr = np.asarray(img).astype(np.uint8)
@@ -424,7 +448,7 @@ def parse_job(image_bytes):
         return None
 
     job = {"km": km, "minutes": minutes, "income": income}
-    job["fuel"] = vote(inner(mn, b["fuel"]), parse_fuel) or 0
+    job["fuel"] = read_fuel(mn, b["fuel"], fix_km(km, minutes)[0])
     job["damage"] = read_penalty(arr, b["damage"])
     job["time_penalty"] = read_penalty(arr, b["time_penalty"])
 
@@ -693,7 +717,8 @@ def main():
     # Jobs from an older version stay in the file until they are read again with the new fields
     jobs = load_json("jobs.json", [])
     index = {j["id"]: i for i, j in enumerate(jobs)}
-    current = {j["id"] for j in jobs if j.get("v") == SCHEMA}
+    # A job with no fuel value is read again on the next runs, up to 3 tries in total
+    current = {j["id"] for j in jobs if j.get("v") == SCHEMA and ("fuel" in j or j.get("fuel_tries", 0) >= 3)}
     nojob_ids = set()
     out_of_time = False
     # Oldest first so the newest job ends up last
@@ -720,6 +745,9 @@ def main():
                 continue
             job["id"] = job_id
             job["v"] = SCHEMA
+            if "fuel" not in job:
+                before = jobs[index[job_id]] if job_id in index else {}
+                job["fuel_tries"] = before.get("fuel_tries", 0) + 1
             job["author"] = msg["author"]["id"]
             job["name"] = msg["author"].get("global_name") or msg["author"].get("username") or msg["author"]["id"]
             job["ts"] = msg.get("timestamp", "")
