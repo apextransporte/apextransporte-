@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 
 
@@ -13,7 +14,11 @@ def parse_date(value):
 
 
 def norm(name):
-    return str(name or "").strip().lower()
+    """Lower case, no spaces around names, and no Apex tag in front.
+    Apex|phantom, Apex | Phantom and PHANTOM all become phantom."""
+    text = str(name or "").strip().lower()
+    text = re.sub(r"^\s*apex\s*[|\u2223\uff5c/]\s*", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def estimate_net_worth(jobs, path="net_worth_base.json"):
