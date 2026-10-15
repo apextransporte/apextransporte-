@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#e4e6e8;--paper:#f7f7f6;--ink:#101010;--edge:#101010;--muted:#4d4f52;--red:#d90f0f;
+  --bg:#0c0c0c;--paper:#171717;--ink:#f1f1f1;--edge:#d8d8d8;--muted:#a9a9a9;--red:#d90f0f;
   --head:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)
@@ -17,7 +17,7 @@
 :root[data-theme="dark"]{--bg:#0c0c0c;--paper:#171717;--ink:#f1f1f1;--edge:#d8d8d8;--muted:#a9a9a9}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:20px}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+body{margin:0;min-height:100vh;background-color:#000;background-image:radial-gradient(circle at top right,#b30000 0%,transparent 55%),linear-gradient(160deg,#000000 0%,#1a0000 50%,#4d0000 100%);background-attachment:fixed;color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
 a{color:inherit}
 :focus-visible{outline:3px solid var(--red);outline-offset:3px}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
