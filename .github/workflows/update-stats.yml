@@ -1,26 +1,12 @@
-name: Update stats
-on:
-schedule:
-- cron: 0,30 * * * *
-workflow_dispatch:
-permissions:
-contents: write
-jobs:
-update:
-runs-on: ubuntu-24.04
-steps:
-- uses: actions/checkout@v5
-- uses: actions/setup-python@v6
-with:
-python-version: 3.12
-- name: Install packages
-run: pip install requests
-- name: Install extra packages
-run: test ! -f requirements.txt || pip install -r requirements.txt
-- name: Run script
-env:
-DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
-run: python update_stats.py
-- name: Commit
-run: git config user.name apex-bot && git config user.email apex-bot@users.noreply.github.com && git add -A && (git diff --cached --quiet || git commit -m update-stats) && git push
+{
+"name": "Update stats",
+"on": {"schedule": [{"cron": "0,30 * * * *"}], "workflow_dispatch": {}},
+"permissions": {"contents": "write"},
+"jobs": {"update": {"runs-on": "ubuntu-24.04", "steps": [
+{"uses": "actions/checkout@v5"},
+{"uses": "actions/setup-python@v6", "with": {"python-version": "3.12"}},
+{"name": "Install packages", "run": "pip install requests && (test ! -f requirements.txt || pip install -r requirements.txt)"},
+{"name": "Run script", "env": {"DISCORD_BOT_TOKEN": "secrets.DISCORD BOT TOKEN ", "DISCORD STATS CHANNEL ID": "{{ secrets.DISCORD_STATS_CHANNEL_ID }}"}, "run": "python update_stats.py"},
+{"name": "Commit", "run": "git config user.name apex-bot && git config user.email apex-bot@users.noreply.github.com && git add -A && (git diff --cached --quiet || git commit -m update-stats) && git push"}
+]}}
+}
