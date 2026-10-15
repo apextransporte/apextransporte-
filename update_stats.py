@@ -230,6 +230,9 @@ def parse_time(text):
 def parse_fuel(text):
     # The unit letter l is often read as 1, I, ! or |. Remove it before counting digits.
     t = text.strip()
+    dec = re.search(r"(\d+)[.,](\d{1,2})(?!\d)", t)
+    if dec:  # a fraction of a litre, keep the whole litres only
+        return int(dec.group(1))
     if t and t[-1] in "lLiI|!":
         return to_int(t[:-1])
     digits = re.sub(r"[^0-9]", "", t)
@@ -370,7 +373,13 @@ def fix_fuel(fuel, km):
     if 0.15 <= fuel / km <= 1.2:
         return fuel
     options = [(cost, abs(v / km - 0.5), v) for v, cost in edits(fuel).items() if 0.15 <= v / km <= 1.2]
-    return min(options)[2] if options else None
+    if options:
+        return min(options)[2]
+    # The dot of a value like 210.56 is often lost, so the last two digits are the fraction
+    d = str(fuel)
+    if len(d) >= 4 and int(d[:-2]) > 0 and 0.15 <= int(d[:-2]) / km <= 1.2:
+        return int(d[:-2])
+    return None
 
 
 def fix_income(income, km):
@@ -428,7 +437,9 @@ def read_fuel(mn, box, km):
     wide = mn[y1 + int(0.05 * h): y2 - int(0.05 * h), x1 + int(0.08 * w): x2 - int(0.08 * w)]
     value = vote(wide, lambda t: fits(parse_fuel(t)))
     if not value:
-        print("Fuel not read for a job with", km, "km")
+        raw = [pytesseract.image_to_string(prep(crop, sc, mode), config="--psm 7").strip()
+               for sc, mode in VARIANTS[:4]]
+        print("Fuel not read for a job with", km, "km. Raw OCR text:", raw, "Box size:", box[2] - box[0], "x", box[3] - box[1])
     return value or 0
 
 
@@ -554,6 +565,29 @@ def fill_levels(jobs):
             if guess:
                 j["level_now"] = guess
                 j["level_est"] = True
+
+
+def fill_fuel(jobs):
+    """A job whose fuel cannot be read gets an estimate from the driver's own litres per km,
+    or from all drivers when he has no reading yet. It is marked with fuel_est and shown with a ~."""
+    def ratios(items):
+        return [j["fuel"] / j["km"] for j in items if j.get("fuel") and not j.get("fuel_est") and j["km"]]
+
+    everyone = ratios(jobs)
+    overall = median(everyone) if everyone else 0.5
+    by_author = {}
+    for j in jobs:
+        by_author.setdefault(j["author"], []).append(j)
+    own = {}
+    for author, items in by_author.items():
+        r = ratios(items)
+        if r:
+            own[author] = median(r)
+    for j in jobs:
+        if "fuel" in j or not j["km"]:
+            continue
+        j["fuel"] = max(1, int(round(j["km"] * own.get(j["author"], overall))))
+        j["fuel_est"] = True
 
 
 def level_candidates(n):
@@ -716,6 +750,10 @@ def main():
 
     # Jobs from an older version stay in the file until they are read again with the new fields
     jobs = load_json("jobs.json", [])
+    for j in jobs:  # estimates are made again on every run
+        if j.get("fuel_est"):
+            j.pop("fuel", None)
+            j.pop("fuel_est", None)
     index = {j["id"]: i for i, j in enumerate(jobs)}
     # A job with no fuel value is read again on the next runs, up to 3 tries in total
     current = {j["id"] for j in jobs if j.get("v") == SCHEMA and ("fuel" in j or j.get("fuel_tries", 0) >= 3)}
@@ -762,6 +800,7 @@ def main():
     # Every saved job gets the sanity fixes, including jobs saved by earlier runs
     for j in jobs:
         sanitize(j)
+    fill_fuel(jobs)
     jobs.sort(key=lambda j: j.get("ts", ""))
     fix_levels(jobs)
     fill_levels(jobs)
@@ -825,7 +864,7 @@ def main():
         m = members.setdefault(
             j["author"],
             {"name": j["name"], "runs": 0, "km": 0, "minutes": 0, "income": 0,
-             "fuel": 0, "damage": 0, "time_penalty": 0, "read": 0, "pen_read": 0, "last": None,
+             "fuel": 0, "damage": 0, "time_penalty": 0, "read": 0, "pen_read": 0, "fuel_est": False, "last": None,
              "author": j["author"]},
         )
         m["name"] = j["name"]
@@ -838,6 +877,7 @@ def main():
         m["time_penalty"] += j.get("time_penalty", 0)
         m["read"] += 1 if "fuel" in j else 0
         m["pen_read"] += 1 if "damage" in j else 0
+        m["fuel_est"] = m["fuel_est"] or bool(j.get("fuel_est"))
         m["last"] = j
     table = []
     for m in sorted(members.values(), key=lambda x: x["km"], reverse=True):
@@ -849,14 +889,14 @@ def main():
                 "distance": "{:,} km".format(m["km"]),
                 "hours": fmt_time(m["minutes"]),
                 "income": "\u20ac{:,}".format(m["income"]),
-                "fuel": "{:,} l".format(m["fuel"]) if m["read"] else "",
+                "fuel": ("~" if m["fuel_est"] else "") + "{:,} l".format(m["fuel"]) if m["read"] else "",
                 "damage": "\u20ac{:,}".format(m["damage"]) if m["pen_read"] else "",
                 "time_penalty": "\u20ac{:,}".format(m["time_penalty"]) if m["pen_read"] else "",
                 "networth": fmt_money(lookup_net_worth(net_worth, m["name"], m["author"], manual_net_worth)),
                 "last_km": "{} km".format(last["km"]),
                 "last_time": fmt_time(last["minutes"]),
                 "last_income": "\u20ac{:,}".format(last["income"]),
-                "last_fuel": "{} l".format(last["fuel"]) if "fuel" in last else "",
+                "last_fuel": ("~" if last.get("fuel_est") else "") + "{} l".format(last["fuel"]) if "fuel" in last else "",
                 "last_damage": "\u20ac{:,}".format(last["damage"]) if "damage" in last else "",
                 "last_time_penalty": "\u20ac{:,}".format(last["time_penalty"]) if "time_penalty" in last else "",
                 "level": last.get("level_now", ""),
