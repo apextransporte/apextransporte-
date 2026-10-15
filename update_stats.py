@@ -311,7 +311,7 @@ def swaps(n):
 
 
 def read_level(gray, layout):
-    """The bar runs from the current level (left) to the next level (right)."""
+    """The bar shows the level before (left) and the driver level (right)."""
     a = read_level_number(gray, layout["level_a"])
     b = read_level_number(gray, layout["level_b"])
     if a is None and b is None:
@@ -477,7 +477,7 @@ def parse_job(image_bytes):
     level = read_level(gray, layout)
     if level:
         job["level"] = "{} to {}".format(level[0], level[1])
-        job["level_now"] = level[0]
+        job["level_now"] = level[1]   # the right number on the bar is the driver level
     sanitize(job)
     return job
 
@@ -573,7 +573,14 @@ def lookup_level(manual, name, author):
 
 def level_from_text(text):
     m = re.match(r"^(\d+) to (\d+)$", text or "")
-    return int(m.group(1)) if m and int(m.group(2)) == int(m.group(1)) + 1 else None
+    return int(m.group(2)) if m and int(m.group(2)) == int(m.group(1)) + 1 else None
+
+
+def use_right_level(jobs):
+    """Old saved jobs stored the left number. Every job takes the right number from its level text."""
+    for j in jobs:
+        if not j.get("level_est") and level_from_text(j.get("level")):
+            j["level_now"] = level_from_text(j["level"])
 
 
 def fill_levels(jobs):
@@ -693,7 +700,7 @@ def fix_levels_once(jobs):
             j.setdefault("level_raw", j.get("level"))
             if fixes:
                 c = min(fixes, key=lambda c: abs(c - low))
-                j["level"] = "{} to {}".format(c, c + 1)
+                j["level"] = "{} to {}".format(c - 1, c)
                 j["level_now"] = c
             else:
                 j["level"] = ""
@@ -837,6 +844,7 @@ def main():
         sanitize(j)
     fill_fuel(jobs)
     jobs.sort(key=lambda j: j.get("ts", ""))
+    use_right_level(jobs)
     fix_levels(jobs)
     fill_levels(jobs)
     mark_duplicates(jobs)
