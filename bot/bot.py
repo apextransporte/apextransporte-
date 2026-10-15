@@ -1,7 +1,9 @@
 import os
+import time
 
 import aiohttp
 import discord
+from aiohttp import web
 from discord import app_commands
 
 TOKEN = os.environ["DISCORD_BOT_TOKEN"]
@@ -9,6 +11,8 @@ DATA_URL = os.getenv(
     "APEX_DATA_URL",
     "https://apextransporte.github.io/apextransporte-/apex_drivers.json",
 )
+CACHE_SECONDS = 60
+FETCH_TIMEOUT = 8
 
 # If your apex_drivers.json uses other field names, change them here.
 FIELDS = {
@@ -22,6 +26,8 @@ FIELDS = {
 }
 
 RED = discord.Color.from_rgb(200, 16, 46)
+
+_cache = {"data": None, "time": 0.0}
 
 
 def get(driver, field, default=0):
@@ -50,31 +56,75 @@ def fmt(value):
 
 
 async def load_drivers():
-    async with aiohttp.ClientSession() as session:
-        async with session.get(DATA_URL) as response:
+    """Return driver data. Uses a 60 second cache and falls back to old data on errors."""
+    now = time.time()
+    if _cache["data"] is not None and now - _cache["time"] < CACHE_SECONDS:
+        return _cache["data"]
+
+    # The changing query value skips the GitHub Pages cache so new job logs show up sooner.
+    url = f"{DATA_URL}?t={int(now)}"
+    try:
+        timeout = aiohttp.ClientTimeout(total=FETCH_TIMEOUT)
+        async with bot.session.get(url, timeout=timeout) as response:
             response.raise_for_status()
             data = await response.json(content_type=None)
+    except Exception:
+        if _cache["data"] is not None:
+            return _cache["data"]
+        raise
+
     if isinstance(data, dict):
         data = data.get("drivers") or data.get("members") or []
+    _cache["data"] = data
+    _cache["time"] = now
     return data
+
+
+async def start_web_server():
+    """Small web page so Render sees an open port. Ping it every 5 minutes to stop sleep."""
+    app = web.Application()
+
+    async def health(request):
+        return web.Response(text="ok")
+
+    app.router.add_get("/", health)
+    app.router.add_get("/health", health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", "10000")))
+    await site.start()
 
 
 class ApexBot(discord.Client):
     def __init__(self):
         super().__init__(intents=discord.Intents.default())
         self.tree = app_commands.CommandTree(self)
+        self.session = None
 
     async def setup_hook(self):
+        self.session = aiohttp.ClientSession()
+        await start_web_server()
         await self.tree.sync()
+
+    async def close(self):
+        if self.session:
+            await self.session.close()
+        await super().close()
 
 
 bot = ApexBot()
+
+DATA_ERROR = "Apex data is not available right now. Try again in a minute."
 
 
 @bot.tree.command(name="stats", description="Show Apex Transporte team stats")
 async def stats(interaction: discord.Interaction):
     await interaction.response.defer()
-    drivers = await load_drivers()
+    try:
+        drivers = await load_drivers()
+    except Exception:
+        await interaction.followup.send(DATA_ERROR)
+        return
     total_distance = sum(num(get(d, "distance")) for d in drivers)
     total_worth = sum(num(get(d, "net_worth")) for d in drivers)
     top = max(drivers, key=lambda d: num(get(d, "distance")), default=None)
@@ -96,7 +146,11 @@ async def stats(interaction: discord.Interaction):
 @app_commands.describe(driver="Driver name")
 async def joblog(interaction: discord.Interaction, driver: str):
     await interaction.response.defer()
-    drivers = await load_drivers()
+    try:
+        drivers = await load_drivers()
+    except Exception:
+        await interaction.followup.send(DATA_ERROR)
+        return
     match = next(
         (d for d in drivers if str(get(d, "name", "")).lower() == driver.lower()),
         None,
@@ -136,7 +190,11 @@ async def leaderboard(
     await interaction.response.defer()
     key = category.value if category else "distance"
     label = category.name if category else "Distance"
-    drivers = await load_drivers()
+    try:
+        drivers = await load_drivers()
+    except Exception:
+        await interaction.followup.send(DATA_ERROR)
+        return
     ranked = sorted(drivers, key=lambda d: num(get(d, key)), reverse=True)[:10]
 
     lines = [
