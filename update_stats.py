@@ -478,6 +478,33 @@ def fmt_time(minutes):
     return "{} h {} m".format(minutes // 60, minutes % 60)
 
 
+def clean_name(name):
+    """'APEX | Kretek' and '[APEX] Kretek' both become 'kretek'. Used only to compare names."""
+    text = re.sub(r"^\s*[\[\(]?\s*apex\s*[\]\)]?\s*[|:\-<>/]*\s*", "", str(name or ""), flags=re.I)
+    text = re.sub(r"[\[\(]\s*apex\s*[\]\)]", "", text, flags=re.I)
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def lookup_net_worth(net_worth, name, author, manual):
+    """Order: value typed in net_worth_manual.json (by Discord ID or name), then the saved base
+    values by exact name, then by cleaned name. A driver is never left blank only because of a tag."""
+    for key in (str(author), name):
+        if key in manual:
+            return manual[key]
+    value = find_net_worth(net_worth, name)
+    if value:
+        return value
+    wanted = clean_name(name)
+    if wanted:
+        for key, val in net_worth.items():
+            if clean_name(key) == wanted:
+                return val
+    for key, val in manual.items():
+        if clean_name(key) == wanted and wanted:
+            return val
+    return value
+
+
 def level_from_text(text):
     m = re.match(r"^(\d+) to (\d+)$", text or "")
     return int(m.group(1)) if m and int(m.group(2)) == int(m.group(1)) + 1 else None
@@ -760,6 +787,7 @@ def main():
     # Net worth starts from the saved base values and grows with every new job income
     job_rows = [{"driver": j["name"], "date": j.get("ts", ""), "income": j["income"]} for j in jobs]
     net_worth = estimate_net_worth(job_rows)
+    manual_net_worth = load_json("net_worth_manual.json", {})
     data["networth"] = fmt_money(sum(net_worth.values()))
     with open("net_worth.json", "w", encoding="utf-8") as f:
         json.dump({k: round(v) for k, v in net_worth.items()}, f, ensure_ascii=False)
@@ -769,7 +797,8 @@ def main():
         m = members.setdefault(
             j["author"],
             {"name": j["name"], "runs": 0, "km": 0, "minutes": 0, "income": 0,
-             "fuel": 0, "damage": 0, "time_penalty": 0, "read": 0, "last": None},
+             "fuel": 0, "damage": 0, "time_penalty": 0, "read": 0, "pen_read": 0, "last": None,
+             "author": j["author"]},
         )
         m["name"] = j["name"]
         m["runs"] += 1
@@ -780,6 +809,7 @@ def main():
         m["damage"] += j.get("damage", 0)
         m["time_penalty"] += j.get("time_penalty", 0)
         m["read"] += 1 if "fuel" in j else 0
+        m["pen_read"] += 1 if "damage" in j else 0
         m["last"] = j
     table = []
     for m in sorted(members.values(), key=lambda x: x["km"], reverse=True):
@@ -792,9 +822,9 @@ def main():
                 "hours": fmt_time(m["minutes"]),
                 "income": "\u20ac{:,}".format(m["income"]),
                 "fuel": "{:,} l".format(m["fuel"]) if m["read"] else "",
-                "damage": "\u20ac{:,}".format(m["damage"]) if m["read"] else "",
-                "time_penalty": "\u20ac{:,}".format(m["time_penalty"]) if m["read"] else "",
-                "networth": fmt_money(find_net_worth(net_worth, m["name"])),
+                "damage": "\u20ac{:,}".format(m["damage"]) if m["pen_read"] else "",
+                "time_penalty": "\u20ac{:,}".format(m["time_penalty"]) if m["pen_read"] else "",
+                "networth": fmt_money(lookup_net_worth(net_worth, m["name"], m["author"], manual_net_worth)),
                 "last_km": "{} km".format(last["km"]),
                 "last_time": fmt_time(last["minutes"]),
                 "last_income": "\u20ac{:,}".format(last["income"]),
@@ -808,6 +838,10 @@ def main():
             }
         )
     data["members"] = table
+    for m in members.values():
+        if not lookup_net_worth(net_worth, m["name"], m["author"], manual_net_worth):
+            print("No net worth for:", m["name"], "Discord ID:", m["author"],
+                  "-> add it to net_worth_manual.json")
 
     with open("jobs.json", "w", encoding="utf-8") as f:
         json.dump(saved_jobs, f, ensure_ascii=False)
