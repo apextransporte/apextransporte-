@@ -221,11 +221,17 @@ def parse_km(text):
 
 
 def parse_time(text):
-    hours = re.search(r"(\d+)\s*h", text)
-    mins = re.search(r"(\d+)\s*m", text)
+    """Reads 2h 12m. The digit 1 is often read as i, l, | or !, so those letters count as 1 before the m."""
+    t = text.lower().strip()
+    hours = re.search(r"(\d+)\s*h", t)
+    rest = t[hours.end():] if hours else t
+    rest = rest.translate(str.maketrans("il|!", "1111"))
+    mins = re.search(r"(\d{1,2})\s*m", rest)
     if not hours and not mins:
         return None
-    return (int(hours.group(1)) if hours else 0) * 60 + (int(mins.group(1)) if mins else 0)
+    if hours and not mins:
+        return None  # hours with an unreadable minutes part would show a wrong time, so read it again
+    return (int(hours.group(1)) if hours else 0) * 60 + int(mins.group(1))
 
 
 def parse_fuel(text):
@@ -373,13 +379,14 @@ def fix_fuel(fuel, km):
         return fuel
     if 0.15 <= fuel / km <= 1.2:
         return fuel
+    # The game shows fuel like 28.9 or 244.7 and the dot is often lost, so first try the last digit as the decimal
+    d = str(fuel)
+    for cut in (1, 2):
+        if len(d) > cut and int(d[:-cut]) > 0 and 0.15 <= int(d[:-cut]) / km <= 1.2:
+            return int(d[:-cut])
     options = [(cost, abs(v / km - 0.5), v) for v, cost in edits(fuel).items() if 0.15 <= v / km <= 1.2]
     if options:
         return min(options)[2]
-    # The dot of a value like 210.56 is often lost, so the last two digits are the fraction
-    d = str(fuel)
-    if len(d) >= 4 and int(d[:-2]) > 0 and 0.15 <= int(d[:-2]) / km <= 1.2:
-        return int(d[:-2])
     return None
 
 
