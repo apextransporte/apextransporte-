@@ -21,7 +21,8 @@ from post_joblog import send_joblog
 API = "https://discord.com/api/v10"
 MAX_MESSAGES = 300
 MAX_SECONDS = int(os.environ.get("MAX_SECONDS", "1500"))
-SCHEMA = 3
+SCHEMA = 4   # raised so every old screenshot is read again with the fixed rules
+MAX_SPEED = 300   # km per hour, the game allows fast average speeds
 MAX_LEVEL = 999   # the game has no level above this, anything higher is a misread
 LEVEL_JUMP = 40   # a level this far from the driver's other levels is a misread
 
@@ -340,12 +341,12 @@ def speed(km, minutes):
 def fix_km(km, minutes, fuel=None):
     """Remove a stray digit read next to the distance when the speed is not believable.
     When the fuel is known, it picks the distance that also matches the fuel use."""
-    if minutes and 15 <= speed(km, minutes) <= 150 and km <= 3000:
+    if minutes and 15 <= speed(km, minutes) <= MAX_SPEED and km <= 3000:
         return km, False
     s = str(km)
     cands = []
     for cand in (s[1:], s[:-1], s[2:], s[:-2], s[1:-1]):
-        if cand and int(cand) > 0 and 15 <= speed(int(cand), minutes) <= 150:
+        if cand and int(cand) > 0 and 15 <= speed(int(cand), minutes) <= MAX_SPEED:
             cands.append(int(cand))
     if not cands:
         return km, False
@@ -400,18 +401,28 @@ def sanitize(job):
     else:
         job["km"] = raw
         job.pop("km_raw", None)
-    inc = fix_income(job["income"], job["km"])
-    if inc != job["income"]:
-        job.setdefault("income_raw", job["income"])
+    raw_inc = job.get("income_raw", job["income"])
+    inc = fix_income(raw_inc, job["km"])
+    if inc != raw_inc:
+        job["income_raw"] = raw_inc
         job["income"] = inc
-    if "fuel" in job:
-        fixed = fix_fuel(job["fuel"], job["km"])
+    else:
+        job["income"] = raw_inc
+        job.pop("income_raw", None)
+    if "fuel" in job or "fuel_raw" in job:
+        raw_fuel = job.get("fuel_raw", job.get("fuel"))
+        fixed = fix_fuel(raw_fuel, job["km"])
         if fixed is None:
+            job["fuel_raw"] = raw_fuel
             job.pop("fuel", None)  # unreadable, so the table stays blank instead of showing a wrong number
             job["check"] = True
         else:
             job["fuel"] = fixed
-    if not 15 <= speed(job["km"], job["minutes"]) <= 140 or job["km"] and not 4 <= job["income"] / job["km"] <= 120:
+            if fixed != raw_fuel:
+                job["fuel_raw"] = raw_fuel
+            else:
+                job.pop("fuel_raw", None)
+    if not 15 <= speed(job["km"], job["minutes"]) <= MAX_SPEED or job["km"] and not 4 <= job["income"] / job["km"] <= 120:
         job["check"] = True
     else:
         job.pop("check", None)
@@ -538,6 +549,26 @@ def lookup_net_worth(net_worth, name, author, manual):
         if clean_name(key) == wanted and wanted:
             return val
     return value
+
+
+LEVEL_RETRIES = 3  # a job saved with no level is read again, up to this many tries in total
+
+
+def has_real_level(j):
+    """True when the level came from the screenshot and not from an estimate."""
+    return bool(j.get("level_now")) and not j.get("level_est")
+
+
+def lookup_level(manual, name, author):
+    """A level typed in levels_manual.json (by Discord ID or name) wins over the screenshot reading."""
+    for key in (str(author), name):
+        if key in manual and manual[key]:
+            return int(manual[key])
+    wanted = clean_name(name)
+    for key, val in manual.items():
+        if wanted and clean_name(key) == wanted and val:
+            return int(val)
+    return None
 
 
 def level_from_text(text):
@@ -756,7 +787,8 @@ def main():
             j.pop("fuel_est", None)
     index = {j["id"]: i for i, j in enumerate(jobs)}
     # A job with no fuel value is read again on the next runs, up to 3 tries in total
-    current = {j["id"] for j in jobs if j.get("v") == SCHEMA and ("fuel" in j or j.get("fuel_tries", 0) >= 3)}
+    current = {j["id"] for j in jobs if j.get("v") == SCHEMA and ("fuel" in j or j.get("fuel_tries", 0) >= 3)
+               and (has_real_level(j) or j.get("level_tries", 0) >= LEVEL_RETRIES)}
     nojob_ids = set()
     out_of_time = False
     # Oldest first so the newest job ends up last
@@ -786,6 +818,9 @@ def main():
             if "fuel" not in job:
                 before = jobs[index[job_id]] if job_id in index else {}
                 job["fuel_tries"] = before.get("fuel_tries", 0) + 1
+            if "level_now" not in job:
+                before = jobs[index[job_id]] if job_id in index else {}
+                job["level_tries"] = before.get("level_tries", 0) + 1
             job["author"] = msg["author"]["id"]
             job["name"] = msg["author"].get("global_name") or msg["author"].get("username") or msg["author"]["id"]
             job["ts"] = msg.get("timestamp", "")
@@ -855,6 +890,7 @@ def main():
     job_rows = [{"driver": j["name"], "date": j.get("ts", ""), "income": j["income"]} for j in jobs]
     net_worth = estimate_net_worth(job_rows)
     manual_net_worth = load_json("net_worth_manual.json", {})
+    manual_levels = load_json("levels_manual.json", {})
     data["networth"] = fmt_money(sum(net_worth.values()))
     with open("net_worth.json", "w", encoding="utf-8") as f:
         json.dump({k: round(v) for k, v in net_worth.items()}, f, ensure_ascii=False)
@@ -899,8 +935,8 @@ def main():
                 "last_fuel": ("~" if last.get("fuel_est") else "") + "{} l".format(last["fuel"]) if "fuel" in last else "",
                 "last_damage": "\u20ac{:,}".format(last["damage"]) if "damage" in last else "",
                 "last_time_penalty": "\u20ac{:,}".format(last["time_penalty"]) if "time_penalty" in last else "",
-                "level": last.get("level_now", ""),
-                "level_estimated": bool(last.get("level_est")),
+                "level": lookup_level(manual_levels, m["name"], m["author"]) or last.get("level_now", ""),
+                "level_estimated": bool(last.get("level_est")) and not lookup_level(manual_levels, m["name"], m["author"]),
                 "last_level": last.get("level", ""),
                 "last_date": last.get("ts", ""),
             }
