@@ -1,3 +1,4 @@
+import bisect
 import io
 import json
 import os
@@ -5,6 +6,7 @@ import re
 import time
 import urllib.parse
 from collections import Counter
+from statistics import median
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -20,6 +22,8 @@ API = "https://discord.com/api/v10"
 MAX_MESSAGES = 300
 MAX_SECONDS = int(os.environ.get("MAX_SECONDS", "1500"))
 SCHEMA = 3
+MAX_LEVEL = 999   # the game has no level above this, anything higher is a misread
+LEVEL_JUMP = 40   # a level this far from the driver's other levels is a misread
 
 # Job cards are posted to the output channel only for messages newer than this ID
 MIN_POST_ID = 1559717373542400000
@@ -501,6 +505,107 @@ def fill_levels(jobs):
                 j["level_est"] = True
 
 
+def level_candidates(n):
+    """Numbers the reader may have turned into n: one stray digit added, or 1 and 7 mixed up."""
+    out = set()
+    text = str(n)
+    for i in range(len(text)):
+        rest = text[:i] + text[i + 1:]
+        if rest:
+            out.add(int(rest))
+    for v in list(out) + [n]:
+        out |= set(swaps(v))
+    out.discard(n)
+    return out
+
+
+def longest_rising(values):
+    """Positions of the longest run of values that never goes down. None values are skipped."""
+    tails, tail_pos, prev = [], [], {}
+    for i, v in enumerate(values):
+        if v is None:
+            continue
+        k = bisect.bisect_right(tails, v)
+        if k == len(tails):
+            tails.append(v)
+            tail_pos.append(i)
+        else:
+            tails[k] = v
+            tail_pos[k] = i
+        prev[i] = tail_pos[k - 1] if k else None
+    keep = set()
+    i = tail_pos[-1] if tail_pos else None
+    while i is not None:
+        keep.add(i)
+        i = prev[i]
+    return keep
+
+
+def fix_levels_once(jobs):
+    """A level never goes down, so a reading that breaks the order for the same driver is a misread.
+    Repair it when a nearby number fits, or drop it so fill_levels estimates it from the nearest job."""
+    by_author = {}
+    for j in sorted(jobs, key=lambda x: x.get("ts", "")):
+        if j.get("level_est"):  # estimates are made again on every run
+            j.pop("level_est", None)
+            j.pop("level_now", None)
+        by_author.setdefault(j["author"], []).append(j)
+    for items in by_author.values():
+        vals = [j.get("level_now") or level_from_text(j.get("level")) for j in items]
+        vals = [v if v and v <= MAX_LEVEL else None for v in vals]
+        keep = longest_rising(vals)
+        order = sorted(keep)
+        for n, i in enumerate(order):  # a kept level far from its kept neighbours is a misread too
+            near = [vals[k] for k in order[max(0, n - 3):n + 4] if k != i]
+            if near and abs(vals[i] - median(near)) > LEVEL_JUMP:
+                keep.discard(i)
+        for i, j in enumerate(items):
+            if i in keep or (not j.get("level_now") and not level_from_text(j.get("level"))):
+                continue
+            before = [vals[k] for k in range(i - 1, -1, -1) if k in keep][:1]
+            after = [vals[k] for k in range(i + 1, len(items)) if k in keep][:1]
+            raw = j.get("level_now") or level_from_text(j.get("level"))
+            if before and after:
+                low, high = before[0], after[0]
+            elif before:
+                low, high = before[0], before[0] + 8
+            elif after:
+                low, high = after[0] - 8, after[0]
+            else:
+                low, high = 1, MAX_LEVEL
+            fixes = [c for c in level_candidates(raw) if low <= c <= high]
+            j.setdefault("level_raw", j.get("level"))
+            if fixes:
+                c = min(fixes, key=lambda c: abs(c - low))
+                j["level"] = "{} to {}".format(c, c + 1)
+                j["level_now"] = c
+            else:
+                j["level"] = ""
+                j.pop("level_now", None)
+
+
+def fix_levels(jobs):
+    """Repeats the repair until the levels stop changing, so one run gives the final answer."""
+    for _ in range(5):
+        before = [(j.get("level"), j.get("level_now")) for j in jobs]
+        fix_levels_once(jobs)
+        if before == [(j.get("level"), j.get("level_now")) for j in jobs]:
+            break
+
+
+def mark_duplicates(jobs):
+    """The same screenshot posted twice counts once. The repeat stays in the file with a dup flag
+    and is left out of every total."""
+    seen = set()
+    for j in sorted(jobs, key=lambda x: x.get("ts", "")):
+        j.pop("dup", None)
+        fp = fingerprint(j)
+        if fp in seen:
+            j["dup"] = True
+        else:
+            seen.add(fp)
+
+
 def card_date(ts):
     try:
         return datetime.fromisoformat(ts).astimezone(TURKEY).strftime("%B %d %H:%M")
@@ -603,7 +708,9 @@ def main():
     for j in jobs:
         sanitize(j)
     jobs.sort(key=lambda j: j.get("ts", ""))
+    fix_levels(jobs)
     fill_levels(jobs)
+    mark_duplicates(jobs)
 
     # Reactions: check mark for new job logs, X for repeats and for images with no job log
     reaction_start = time.time()
@@ -619,6 +726,10 @@ def main():
     print("Reactions handled:", done, "of", len(plan))
 
     post_new_jobs(jobs, plan, messages)
+
+    # Repeated screenshots stay in jobs.json but never count in any total
+    saved_jobs = jobs
+    jobs = [j for j in saved_jobs if not j.get("dup")]
 
     data = load_json("data.json", {})
     for key in ["networth", "drivers", "hours", "distance", "runs", "income", "latest_job"]:
@@ -699,7 +810,7 @@ def main():
     data["members"] = table
 
     with open("jobs.json", "w", encoding="utf-8") as f:
-        json.dump(jobs, f, ensure_ascii=False)
+        json.dump(saved_jobs, f, ensure_ascii=False)
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
 
