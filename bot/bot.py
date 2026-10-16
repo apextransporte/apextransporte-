@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 
@@ -5,7 +6,6 @@ import aiohttp
 import discord
 from aiohttp import web
 from discord import app_commands
-import datetime
 from discord.ext import tasks
 
 TOKEN = os.getenv("TOKEN") or os.environ["DISCORD_BOT_TOKEN"]
@@ -212,7 +212,7 @@ async def leaderboard(
     await interaction.followup.send(embed=embed)
 
 
-@tasks.loop(time=datetime.time(hour=21, minute=58, tzinfo=datetime.timezone.utc))
+@tasks.loop(time=datetime.time(hour=22, minute=25, tzinfo=datetime.timezone.utc))
 async def post_leaderboard():
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
     if channel is None:
