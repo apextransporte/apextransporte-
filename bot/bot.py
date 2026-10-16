@@ -212,7 +212,7 @@ async def leaderboard(
     await interaction.followup.send(embed=embed)
 
 
-@tasks.loop(time=datetime.time(hour=00 minute=44, tzinfo=datetime.timezone.utc))
+@tasks.loop(time=datetime.time(hour=00, minute=50, tzinfo=datetime.timezone.utc))
 async def post_leaderboard():
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
     if channel is None:
