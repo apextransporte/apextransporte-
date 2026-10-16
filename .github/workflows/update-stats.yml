@@ -10,11 +10,12 @@ permissions:
 
 concurrency:
   group: update-stats
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -25,14 +26,17 @@ jobs:
           python-version: "3.12"
 
       - name: Install Tesseract
+        timeout-minutes: 3
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr
 
       - name: Install packages
+        timeout-minutes: 3
         run: pip install requests numpy pillow scipy pytesseract
 
       - name: Run script
+        timeout-minutes: 5
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
@@ -40,6 +44,7 @@ jobs:
         run: python update_stats.py
 
       - name: Commit
+        timeout-minutes: 2
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
