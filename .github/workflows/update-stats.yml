@@ -24,13 +24,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+
       - name: Install packages
-        run: pip install requests numpy pillow scipy
+        run: pip install requests numpy pillow scipy pytesseract
 
       - name: Run script
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_STATS_CHANNEL_ID: ${{ secrets.DISCORD_STATS_CHANNEL_ID }}
+          DISCORD_OUTPUT_CHANNEL_ID: ${{ secrets.DISCORD_OUTPUT_CHANNEL_ID }}
         run: python update_stats.py
 
       - name: Commit
