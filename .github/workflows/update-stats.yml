@@ -25,7 +25,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install packages
-        run: pip install requests numpy pillow
+        run: pip install requests numpy pillow scipy
 
       - name: Run script
         env:
