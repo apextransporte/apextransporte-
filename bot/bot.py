@@ -5,6 +5,8 @@ import aiohttp
 import discord
 from aiohttp import web
 from discord import app_commands
+import datetime
+from discord.ext import tasks
 
 TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 DATA_URL = os.getenv(
@@ -26,6 +28,7 @@ FIELDS = {
 }
 
 RED = discord.Color.from_rgb(200, 16, 46)
+LEADERBOARD_CHANNEL_ID = int(os.getenv("LEADERBOARD_CHANNEL_ID", "0"))
 
 _cache = {"data": None, "time": 0.0}
 
@@ -207,6 +210,31 @@ async def leaderboard(
         color=RED,
     )
     await interaction.followup.send(embed=embed)
+
+@tasks.loop(time=datetime.time(hour=18, minute=0, tzinfo=datetime.timezone.utc))
+async def post_leaderboard():
+channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+if channel is None:
+return
+try:
+drivers = await load_drivers()
+except Exception:
+return
+ranked = sorted(drivers, key=lambda d: num(get(d, "distance")), reverse=True)[:10]
+lines = [
+f"{i}. {get(d, 'name', 'Unknown')} - {fmt(get(d, 'distance'))} km"
+for i, d in enumerate(ranked, start=1)
+]
+embed = discord.Embed(
+title="Daily Top 10 by Distance",
+description="\n".join(lines) or "No data yet.",
+color=RED,
+)
+await channel.send(embed=embed)
+@bot.event
+async def on_ready():
+if not post_leaderboard.is_running():
+post_leaderboard.start()
 
 
 bot.run(TOKEN)
