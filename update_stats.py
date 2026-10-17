@@ -25,6 +25,7 @@ SCHEMA = 4   # raised so every old screenshot is read again with the fixed rules
 MAX_SPEED = 300   # km per hour, the game allows fast average speeds
 MAX_LEVEL = 999   # the game has no level above this, anything higher is a misread
 LEVEL_DROP = 2    # a reading just below the earlier level is kept as the screenshot showed it
+LEVEL_SHIFT = 12  # the last two readings of a driver that agree within this many levels back each other up
 LEVEL_JUMP = 40   # a level this far from the driver's other levels is a misread
 
 # Job cards are posted to the output channel only for messages newer than this ID
@@ -692,7 +693,10 @@ def fix_levels_once(jobs):
         order = sorted(keep)
         for n, i in enumerate(order):  # a kept level far from its kept neighbours is a misread too
             near = [vals[k] for k in order[max(0, n - 3):n + 4] if k != i]
-            if near and abs(vals[i] - median(near)) > LEVEL_JUMP:
+            tail = order[-2:]
+            backed = len(tail) == 2 and i in tail and i >= len(items) - 2 and all(
+                k >= len(items) - 2 for k in tail) and 0 <= vals[tail[1]] - vals[tail[0]] <= LEVEL_SHIFT
+            if near and not backed and abs(vals[i] - median(near)) > LEVEL_JUMP:
                 keep.discard(i)
         for i, j in enumerate(items):
             if i in keep or (not j.get("level_now") and not level_from_text(j.get("level"))):
@@ -866,6 +870,10 @@ def main():
     # Every saved job gets the sanity fixes, including jobs saved by earlier runs
     for j in jobs:
         sanitize(j)
+    fixes = load_json("job_corrections.json", {})  # figures read from the game screen by a person win over the reader
+    for j in jobs:
+        for key, val in fixes.get(j.get("id"), {}).items():
+            j[key] = val
     fill_fuel(jobs)
     jobs.sort(key=lambda j: j.get("ts", ""))
     use_left_level(jobs)
