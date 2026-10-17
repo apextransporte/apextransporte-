@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apex Transporte Leaderboard</title>
+<style>
+  body { margin: 0; padding: 24px; background: #0d0d0d; color: #f2f2f2; font-family: Arial, sans-serif; }
+  h1 { color: #e11d2e; text-align: center; }
+  .wrap { max-width: 900px; margin: 0 auto; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #e11d2e; color: #fff; padding: 12px; text-align: left; }
+  td { padding: 12px; border-bottom: 1px solid #2a2a2a; }
+  tr:hover td { background: #1a1a1a; }
+</style>
+</head>
+<body>
+<h1>Net worth Leaderboard</h1>
+<div class="wrap">
+  <table id="leaderboard">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Driver</th>
+        <th>Level</th>
+        <th>Net worth</th>
+        <th>Distance (km)</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard-body"></tbody>
+  </table>
+</div>
+
+<script>
+function toNumber(x) {
+  if (typeof x === "number") return x
+  const text = String(x).trim().toLowerCase().replace(/,/g, "")
+  const num = parseFloat(text)
+  if (text.endsWith("m")) return Math.round(num * 1000000)
+  if (text.endsWith("k")) return Math.round(num * 1000)
+  return num
+}
+
+function formatNumber(x) {
+  return toNumber(x).toLocaleString("en-US")
+}
+
+function addCell(row, text) {
+  const cell = document.createElement("td")
+  cell.textContent = text
+  row.appendChild(cell)
+}
+
+async function loadLeaderboard() {
+  const res = await fetch("apex_drivers.json")
+  const drivers = await res.json()
+  drivers.sort((a, b) => toNumber(b.net_worth) - toNumber(a.net_worth))
+  const body = document.getElementById("leaderboard-body")
+  body.innerHTML = ""
+  drivers.forEach((d, i) => {
+    const row = document.createElement("tr")
+    addCell(row, "#" + (i + 1))
+    addCell(row, d.name)
+    addCell(row, d.level)
+    addCell(row, formatNumber(d.net_worth))
+    addCell(row, formatNumber(d.distance))
+    body.appendChild(row)
+  })
+}
+
+loadLeaderboard()
+</script>
+</body>
+</html>
