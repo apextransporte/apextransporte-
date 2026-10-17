@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import re
 import time
@@ -20,13 +21,13 @@ FETCH_TIMEOUT = 8
 
 # If your apex_drivers.json uses other field names, change them here.
 FIELDS = {
-    "name": ["name", "driver", "username"],
+    "name": ["name", "driver", "username", "display_name", "displayName", "nickname", "discord_name"],
     "level": ["level", "lvl"],
-    "net_worth": ["net_worth", "networth", "netWorth"],
-    "distance": ["distance", "distance_km", "distanceKm", "total_distance"],
-    "income": ["income", "total_income"],
-    "time": ["time", "driving_time", "total_time"],
-    "jobs": ["jobs", "job_count", "job_log"],
+    "net_worth": ["net_worth", "networth", "netWorth", "net", "balance", "money"],
+    "distance": ["distance", "distance_km", "distanceKm", "total_distance", "km", "kms", "kilometers"],
+    "income": ["income", "total_income", "earnings", "revenue"],
+    "time": ["time", "driving_time", "drivingTime", "total_time", "hours", "driving_hours", "playtime"],
+    "jobs": ["jobs", "job_count", "job_log", "jobLog", "runs", "total_runs", "totalRuns", "deliveries", "total_jobs"],
 }
 
 RED = discord.Color.from_rgb(200, 16, 46)
@@ -36,14 +37,15 @@ LEADERBOARD_CHANNEL_ID = int(os.getenv("LEADERBOARD_CHANNEL_ID", "0"))
 LOGO_URL = os.getenv("LOGO_URL", "")
 FOOTER = "Managed by Apex Transporte \u2022 For viewing global leaderboards, please use bot commands."
 
-_cache = {"data": None, "time": 0.0}
+_cache = {"data": None, "time": 0.0, "raw": None}
 
 
 def words(text):
-    """Lower case words of a name, without Apex tags and symbols."""
-    text = unicodedata.normalize("NFKC", str(text)).lower()
+    """Lower case words of a name, without Apex tags, flags and symbols."""
+    text = str(text).replace("\u2122", " ").replace("_", " ")
+    text = unicodedata.normalize("NFKC", text).lower()
     found = re.split(r"[^\w]+", text)
-    return [w for w in found if w and w not in ("apex", "the") and w != "_"]
+    return [w for w in found if w and w not in ("apex", "the", "tm")]
 
 
 def find_driver(drivers, query):
@@ -64,10 +66,18 @@ def find_driver(drivers, query):
     return None
 
 
+def squash(text):
+    return re.sub(r"[^a-z0-9]", "", str(text).lower())
+
+
 def get(driver, field, default=0):
     for key in FIELDS[field]:
         if key in driver and driver[key] not in (None, ""):
             return driver[key]
+    wanted = {squash(k) for k in FIELDS[field]}
+    for key, value in driver.items():
+        if squash(key) in wanted and value not in (None, ""):
+            return value
     return default
 
 
@@ -160,6 +170,7 @@ async def load_drivers():
             return _cache["data"]
         raise
 
+    _cache["raw"] = data
     if isinstance(data, dict):
         found = []
         for key in ("members", "drivers"):  # data.json also has a text field named drivers, so only a list counts
@@ -238,6 +249,22 @@ async def stats(interaction: discord.Interaction):
     await interaction.followup.send(embed=style(embed))
 
 
+@bot.tree.command(name="datacheck", description="Show the raw data fields the bot reads")
+async def datacheck(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    try:
+        drivers = await load_drivers()
+    except Exception as error:
+        await interaction.followup.send(f"{DATA_ERROR} ({error!r})")
+        return
+    raw = _cache["raw"]
+    top = list(raw.keys()) if isinstance(raw, dict) else "a plain list"
+    first = json.dumps(drivers[0], default=str)[:1200] if drivers else "no drivers"
+    names = ", ".join(str(get(d, "name", "?")) for d in drivers[:15])
+    text = f"Top level: {top}\nDrivers: {len(drivers)}\nFirst entry: {first}\nNames: {names}"
+    await interaction.followup.send(text[:1900], ephemeral=True)
+
+
 @bot.tree.command(name="joblog", description="Show the job log for one driver")
 @app_commands.describe(driver="Driver name")
 async def joblog(interaction: discord.Interaction, driver: str):
@@ -260,6 +287,18 @@ async def joblog(interaction: discord.Interaction, driver: str):
     embed.add_field(name="Driving time", value=str(get(match, "time", "n/a")))
     embed.add_field(name="Jobs", value=str(get(match, "jobs", "n/a")))
     await interaction.followup.send(embed=embed)
+
+
+@joblog.autocomplete("driver")
+async def joblog_autocomplete(interaction: discord.Interaction, current: str):
+    """Show real driver names from the data while the user types."""
+    try:
+        drivers = await load_drivers()
+    except Exception:
+        return []
+    names = [str(get(d, "name", "")) for d in drivers]
+    found = [n for n in names if n and current.lower() in n.lower()]
+    return [app_commands.Choice(name=n[:100], value=n[:100]) for n in found[:25]]
 
 
 @bot.tree.command(name="leaderboard", description="Show the top 10 Apex drivers")
