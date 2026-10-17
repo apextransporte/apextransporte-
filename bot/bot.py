@@ -18,6 +18,7 @@ DATA_URL = os.getenv(
 )
 CACHE_SECONDS = 60
 FETCH_TIMEOUT = 8
+PER_PAGE = 10
 
 # If your apex_drivers.json uses other field names, change them here.
 FIELDS = {
@@ -101,11 +102,6 @@ def fmt(value):
     return f"{num(value):,.0f}"
 
 
-def short(value):
-    n = num(value)
-    return f"{n / 1000:.1f}k" if n >= 1000 else f"{n:,.0f}"
-
-
 def hours(value):
     """Turn 13918h 41m, 971 or 1.1k into hours as a number."""
     if isinstance(value, (int, float)):
@@ -118,9 +114,9 @@ def hours(value):
 
 
 def fmt_time(total_hours):
-    whole = int(total_hours)
-    minutes = int(round((total_hours - whole) * 60))
-    return f"{whole}h {minutes}m"
+    total_minutes = int(round(total_hours * 60))
+    whole, minutes = divmod(total_minutes, 60)
+    return f"{whole:,}h {minutes}m"
 
 
 def job_count(value):
@@ -136,20 +132,68 @@ def style(embed):
     return embed
 
 
-def board_embed(title, emoji, drivers, key, unit, daily=False):
+def ranked_drivers(drivers, key):
     getter = (lambda d: hours(get(d, key))) if key == "time" else (lambda d: num(get(d, key)))
-    ranked = sorted(drivers, key=getter, reverse=True)[:10]
+    return sorted(drivers, key=getter, reverse=True)
+
+
+def value_text(driver, key, unit):
+    if key == "time":
+        return fmt_time(hours(get(driver, key)))
+    return f"{fmt(get(driver, key))} {unit}".rstrip()
+
+
+def page_count(total):
+    return max(1, (total + PER_PAGE - 1) // PER_PAGE)
+
+
+def board_embed(title, emoji, ranked, key, unit, page=0):
+    start = page * PER_PAGE
     lines = [
-        f"**#{i} {get(d, 'name', 'Unknown')}**\n{short(getter(d))} {unit}".rstrip()
-        for i, d in enumerate(ranked, start=1)
+        f"**#{i} {get(d, 'name', 'Unknown')}**\n{value_text(d, key, unit)}"
+        for i, d in enumerate(ranked[start:start + PER_PAGE], start=start + 1)
     ]
     embed = discord.Embed(
         title=f"{emoji} {title}",
         description="\n\n".join(lines) or "No data yet.",
         color=RED,
     )
-    embed.set_footer(text=FOOTER)
+    embed.set_footer(
+        text=f"Page {page + 1} of {page_count(len(ranked))} \u2022 {len(ranked)} drivers \u2022 {FOOTER}"
+    )
     return embed
+
+
+class LeaderboardView(discord.ui.View):
+    def __init__(self, title, emoji, ranked, key, unit):
+        super().__init__(timeout=300)
+        self.title = title
+        self.emoji = emoji
+        self.ranked = ranked
+        self.key = key
+        self.unit = unit
+        self.page = 0
+        self.pages = page_count(len(ranked))
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.prev_button.disabled = self.page == 0
+        self.next_button.disabled = self.page >= self.pages - 1
+
+    def embed(self):
+        return board_embed(self.title, self.emoji, self.ranked, self.key, self.unit, self.page)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page -= 1
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.embed(), view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.danger)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page += 1
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.embed(), view=self)
 
 
 async def load_drivers():
@@ -219,6 +263,10 @@ class ApexBot(discord.Client):
 bot = ApexBot()
 
 DATA_ERROR = "Apex data is not available right now. Try again in a minute."
+
+EMOJIS = {"distance": "\U0001F6E3\uFE0F", "level": "\u2B50", "net_worth": "\U0001F4B0",
+          "income": "\U0001F4B5", "time": "\u23F1\uFE0F"}
+UNITS = {"distance": "KMs", "level": "", "net_worth": "", "income": "", "time": ""}
 
 
 @bot.tree.command(name="stats", description="Show Apex Transporte team stats")
@@ -301,7 +349,7 @@ async def joblog_autocomplete(interaction: discord.Interaction, current: str):
     return [app_commands.Choice(name=n[:100], value=n[:100]) for n in found[:25]]
 
 
-@bot.tree.command(name="leaderboard", description="Show the top 10 Apex drivers")
+@bot.tree.command(name="leaderboard", description="Show all Apex drivers ranked")
 @app_commands.describe(category="What to rank by")
 @app_commands.choices(
     category=[
@@ -324,11 +372,9 @@ async def leaderboard(
     except Exception:
         await interaction.followup.send(DATA_ERROR)
         return
-    emojis = {"distance": "\U0001F6E3\uFE0F", "level": "\u2B50", "net_worth": "\U0001F4B0",
-              "income": "\U0001F4B5", "time": "\u23F1\uFE0F"}
-    units = {"distance": "KMs", "level": "", "net_worth": "", "income": "", "time": "Hours"}
-    embed = board_embed(f"{label} Leaderboard [Apex]", emojis[key], drivers, key, units[key])
-    await interaction.followup.send(embed=embed)
+    ranked = ranked_drivers(drivers, key)
+    view = LeaderboardView(f"{label} Leaderboard [Apex]", EMOJIS[key], ranked, key, UNITS[key])
+    await interaction.followup.send(embed=view.embed(), view=view)
 
 
 @tasks.loop(time=datetime.time(hour=22, minute=25, tzinfo=datetime.timezone.utc))
@@ -340,8 +386,9 @@ async def post_leaderboard():
         drivers = await load_drivers()
     except Exception:
         return
-    embed = board_embed("Distance Leaderboard [Apex]", "\U0001F6E3\uFE0F", drivers, "distance", "KMs")
-    await channel.send(embed=embed)
+    ranked = ranked_drivers(drivers, "distance")
+    view = LeaderboardView("Distance Leaderboard [Apex]", EMOJIS["distance"], ranked, "distance", UNITS["distance"])
+    await channel.send(embed=view.embed(), view=view)
 
 
 @bot.tree.error
