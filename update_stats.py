@@ -681,7 +681,7 @@ def fix_levels_once(jobs):
             j.pop("level_est", None)
             j.pop("level_now", None)
         first = level_from_text(j.get("level_raw")) if j.get("level_raw") else None
-        if first:  # start again from the number the screenshot gave, so an old repair never stacks up
+        if first and (not j.get("level_now") or j["level_now"] > first):  # an old repair raised the level above the screenshot, so check it again
             j["level"] = j["level_raw"]
             j["level_now"] = first
         by_author.setdefault(j["author"], []).append(j)
@@ -720,6 +720,12 @@ def fix_levels_once(jobs):
                 c = min(fixes, key=lambda c: abs(c - low))
                 j["level"] = "{} to {}".format(c, c + 1)
                 j["level_now"] = c
+            elif i == len(items) - 1 and not any(
+                    c != shown and before and abs(c - before[0]) <= 10 for c in swaps(shown)
+                    ) and 0 < shown <= (before[0] if before else MAX_LEVEL):
+                # the newest screenshot is the truth, so a clean lower reading stays when no 1 and 7 swap explains it
+                j["level"] = "{} to {}".format(shown, shown + 1)
+                j["level_now"] = shown
             else:
                 j["level"] = ""
                 j.pop("level_now", None)
