@@ -1,6 +1,8 @@
 import datetime
 import os
+import re
 import time
+import unicodedata
 
 import aiohttp
 import discord
@@ -11,7 +13,7 @@ from discord.ext import tasks
 TOKEN = os.getenv("TOKEN") or os.environ["DISCORD_BOT_TOKEN"]
 DATA_URL = os.getenv(
     "APEX_DATA_URL",
-    "https://apextransporte.github.io/apextransporte-/apex_drivers.json",
+    "https://apextransporte.github.io/data.json",
 )
 CACHE_SECONDS = 60
 FETCH_TIMEOUT = 8
@@ -21,7 +23,7 @@ FIELDS = {
     "name": ["name", "driver", "username"],
     "level": ["level", "lvl"],
     "net_worth": ["net_worth", "networth", "netWorth"],
-    "distance": ["distance", "distance_km", "total_distance"],
+    "distance": ["distance", "distance_km", "distanceKm", "total_distance"],
     "income": ["income", "total_income"],
     "time": ["time", "driving_time", "total_time"],
     "jobs": ["jobs", "job_count", "job_log"],
@@ -30,7 +32,36 @@ FIELDS = {
 RED = discord.Color.from_rgb(200, 16, 46)
 LEADERBOARD_CHANNEL_ID = int(os.getenv("LEADERBOARD_CHANNEL_ID", "0"))
 
+# Paste your direct logo link here, or set LOGO_URL in Render Environment.
+LOGO_URL = os.getenv("LOGO_URL", "")
+FOOTER = "Managed by Apex Transporte \u2022 For viewing global leaderboards, please use bot commands."
+
 _cache = {"data": None, "time": 0.0}
+
+
+def words(text):
+    """Lower case words of a name, without Apex tags and symbols."""
+    text = unicodedata.normalize("NFKC", str(text)).lower()
+    found = re.split(r"[^\w]+", text)
+    return [w for w in found if w and w not in ("apex", "the") and w != "_"]
+
+
+def find_driver(drivers, query):
+    """Find a driver by exact name, part of a name, or the words of a Discord name like Apex | keem."""
+    q = str(query).strip().lower().lstrip("@")
+    for d in drivers:
+        if str(get(d, "name", "")).lower() == q:
+            return d
+    for d in drivers:
+        if q and q in str(get(d, "name", "")).lower():
+            return d
+    qw = words(q)
+    if qw:
+        for d in drivers:
+            dw = words(get(d, "name", ""))
+            if dw and (all(w in dw for w in qw) or all(w in qw for w in dw)):
+                return d
+    return None
 
 
 def get(driver, field, default=0):
@@ -44,7 +75,9 @@ def num(value):
     if isinstance(value, (int, float)):
         return float(value)
     try:
-        text = str(value).lower().replace(",", "").replace("km", "").strip()
+        text = str(value).lower()
+        for junk in (",", "km", "$", "\u20ac", " "):
+            text = text.replace(junk, "")
         if text.endswith("m"):
             return float(text[:-1]) * 1_000_000
         if text.endswith("k"):
@@ -56,6 +89,57 @@ def num(value):
 
 def fmt(value):
     return f"{num(value):,.0f}"
+
+
+def short(value):
+    n = num(value)
+    return f"{n / 1000:.1f}k" if n >= 1000 else f"{n:,.0f}"
+
+
+def hours(value):
+    """Turn 13918h 41m, 971 or 1.1k into hours as a number."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).lower()
+    match = re.search(r"(\d[\d,]*)\s*h(?:\D+(\d+)\s*m)?", text)
+    if match:
+        return float(match.group(1).replace(",", "")) + float(match.group(2) or 0) / 60
+    return num(value)
+
+
+def fmt_time(total_hours):
+    whole = int(total_hours)
+    minutes = int(round((total_hours - whole) * 60))
+    return f"{whole}h {minutes}m"
+
+
+def job_count(value):
+    if isinstance(value, list):
+        return len(value)
+    return int(num(value))
+
+
+def style(embed):
+    if LOGO_URL:
+        embed.set_thumbnail(url=LOGO_URL)
+    embed.set_footer(text=FOOTER)
+    return embed
+
+
+def board_embed(title, emoji, drivers, key, unit, daily=False):
+    getter = (lambda d: hours(get(d, key))) if key == "time" else (lambda d: num(get(d, key)))
+    ranked = sorted(drivers, key=getter, reverse=True)[:10]
+    lines = [
+        f"**#{i} {get(d, 'name', 'Unknown')}**\n{short(getter(d))} {unit}".rstrip()
+        for i, d in enumerate(ranked, start=1)
+    ]
+    embed = discord.Embed(
+        title=f"{emoji} {title}",
+        description="\n\n".join(lines) or "No data yet.",
+        color=RED,
+    )
+    embed.set_footer(text=FOOTER)
+    return embed
 
 
 async def load_drivers():
@@ -77,7 +161,13 @@ async def load_drivers():
         raise
 
     if isinstance(data, dict):
-        data = data.get("drivers") or data.get("members") or []
+        found = []
+        for key in ("members", "drivers"):  # data.json also has a text field named drivers, so only a list counts
+            if isinstance(data.get(key), list):
+                found = data[key]
+                break
+        data = found
+    data = [d for d in data if isinstance(d, dict)]
     _cache["data"] = data
     _cache["time"] = now
     return data
@@ -130,19 +220,22 @@ async def stats(interaction: discord.Interaction):
         return
     total_distance = sum(num(get(d, "distance")) for d in drivers)
     total_worth = sum(num(get(d, "net_worth")) for d in drivers)
-    top = max(drivers, key=lambda d: num(get(d, "distance")), default=None)
+    total_income = sum(num(get(d, "income")) for d in drivers)
+    total_time = sum(hours(get(d, "time")) for d in drivers)
+    total_jobs = sum(job_count(get(d, "jobs")) for d in drivers)
 
-    embed = discord.Embed(title="Apex Transporte Stats", color=RED)
-    embed.add_field(name="Drivers", value=str(len(drivers)))
-    embed.add_field(name="Total distance", value=f"{total_distance:,.0f} km")
-    embed.add_field(name="Total net worth", value=f"{total_worth:,.0f}")
-    if top:
-        embed.add_field(
-            name="Top driver by distance",
-            value=f"{get(top, 'name', 'Unknown')} ({fmt(get(top, 'distance'))} km)",
-            inline=False,
-        )
-    await interaction.followup.send(embed=embed)
+    embed = discord.Embed(title="\U0001F3E2 Apex Transporte", color=RED)
+    rows = [
+        ("\U0001F464 Active Drivers", f"{len(drivers):,}"),
+        ("\U0001F4B0 Net Worth", f"${total_worth:,.0f}"),
+        ("\U0001F4B5 Total Income", f"${total_income:,.0f}"),
+        ("\U0001F6E3\uFE0F Total Distance", f"{total_distance:,.0f} km"),
+        ("\u23F1\uFE0F Driving Time", fmt_time(total_time)),
+        ("\U0001F69A Total Runs", f"{total_jobs:,}"),
+    ]
+    for name, value in rows:
+        embed.add_field(name=name, value=value, inline=False)
+    await interaction.followup.send(embed=style(embed))
 
 
 @bot.tree.command(name="joblog", description="Show the job log for one driver")
@@ -154,15 +247,7 @@ async def joblog(interaction: discord.Interaction, driver: str):
     except Exception:
         await interaction.followup.send(DATA_ERROR)
         return
-    match = next(
-        (d for d in drivers if str(get(d, "name", "")).lower() == driver.lower()),
-        None,
-    )
-    if match is None:
-        match = next(
-            (d for d in drivers if driver.lower() in str(get(d, "name", "")).lower()),
-            None,
-        )
+    match = find_driver(drivers, driver)
     if match is None:
         await interaction.followup.send(f"No driver found named {driver}.")
         return
@@ -184,6 +269,8 @@ async def joblog(interaction: discord.Interaction, driver: str):
         app_commands.Choice(name="Distance", value="distance"),
         app_commands.Choice(name="Level", value="level"),
         app_commands.Choice(name="Net worth", value="net_worth"),
+        app_commands.Choice(name="Income", value="income"),
+        app_commands.Choice(name="Driving time", value="time"),
     ]
 )
 async def leaderboard(
@@ -198,17 +285,10 @@ async def leaderboard(
     except Exception:
         await interaction.followup.send(DATA_ERROR)
         return
-    ranked = sorted(drivers, key=lambda d: num(get(d, key)), reverse=True)[:10]
-
-    lines = [
-        f"{i}. {get(d, 'name', 'Unknown')} - {fmt(get(d, key))}"
-        for i, d in enumerate(ranked, start=1)
-    ]
-    embed = discord.Embed(
-        title=f"Top 10 by {label}",
-        description="\n".join(lines) or "No data yet.",
-        color=RED,
-    )
+    emojis = {"distance": "\U0001F6E3\uFE0F", "level": "\u2B50", "net_worth": "\U0001F4B0",
+              "income": "\U0001F4B5", "time": "\u23F1\uFE0F"}
+    units = {"distance": "KMs", "level": "", "net_worth": "", "income": "", "time": "Hours"}
+    embed = board_embed(f"{label} Leaderboard [Apex]", emojis[key], drivers, key, units[key])
     await interaction.followup.send(embed=embed)
 
 
@@ -221,17 +301,22 @@ async def post_leaderboard():
         drivers = await load_drivers()
     except Exception:
         return
-    ranked = sorted(drivers, key=lambda d: num(get(d, "distance")), reverse=True)[:10]
-    lines = [
-        f"{i}. {get(d, 'name', 'Unknown')} - {fmt(get(d, 'distance'))} km"
-        for i, d in enumerate(ranked, start=1)
-    ]
-    embed = discord.Embed(
-        title="Daily Top 10 by Distance",
-        description="\n".join(lines) or "No data yet.",
-        color=RED,
-    )
+    embed = board_embed("Distance Leaderboard [Apex]", "\U0001F6E3\uFE0F", drivers, "distance", "KMs")
     await channel.send(embed=embed)
+
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error):
+    """Always answer the user, and write the real error to the Render logs."""
+    print(f"Command error: {error!r}", flush=True)
+    message = "Something went wrong. Please try again in a minute."
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(message)
+        else:
+            await interaction.response.send_message(message)
+    except Exception:
+        pass
 
 
 @bot.event
