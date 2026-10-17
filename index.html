@@ -315,7 +315,7 @@ footer a{margin-right:18px}
     <p id="dnone" class="dnone" hidden>No driver found with this name.</p>
     <script>
     (function(){var q=document.getElementById("dq"),cards=document.querySelectorAll(".dcard"),groups=document.querySelectorAll(".dgroup"),c=document.getElementById("dcount"),n=document.getElementById("dnone");
-    function f(){var v=q.value.trim().toLowerCase(),k=0;
+    function f(){cards=document.querySelectorAll(".dcard");groups=document.querySelectorAll(".dgroup");var v=q.value.trim().toLowerCase(),k=0;
     cards.forEach(function(x){var m=!v||x.getAttribute("data-n").indexOf(v)>-1;x.hidden=!m;if(m)k++;});
     groups.forEach(function(g){g.hidden=!g.querySelector(".dcard:not([hidden])");});
     c.textContent=v?k+" of "+cards.length+" drivers":cards.length+" drivers";n.hidden=k>0;}
@@ -1183,5 +1183,98 @@ dl.notes dd{margin:0;font-weight:600;text-align:right}
   });
 })();
 </script>
+<script>
+(function(){
+  /* Keeps the driver table, the Driver directory and the staff cards in step with the Discord server. members.json is rebuilt every 30 minutes by the bot. */
+  var STOP={apex:1,the:1};
+  var ALIAS={corpratekeem:"keem",nightwingtir:"nightwingsa"};
+  function nz(s){return String(s||"").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu,"");}
+  function tk(s){return String(s||"").normalize("NFKC").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);}
+  function build(list){
+    var out=[];
+    list.forEach(function(m){
+      var keys={},toks={};
+      ["name","username","global_name","nick"].forEach(function(f){
+        if(!m[f])return;
+        var k=nz(m[f]);if(k)keys[k]=1;
+        tk(m[f]).forEach(function(t){toks[t]=1;});
+      });
+      out.push({keys:keys,toks:toks});
+    });
+    return out;
+  }
+  function who(name,pool){
+    var n=nz(name);if(!n)return -2;
+    var al=ALIAS[n];if(al){name=al;n=nz(al);}
+    var i,p;
+    for(i=0;i<pool.length;i++){if(pool[i].keys[n])return i;}
+    var dt=tk(name).filter(function(t){return !STOP[t];});
+    if(dt.length){
+      for(i=0;i<pool.length;i++){p=pool[i];
+        if(dt.every(function(t){return p.toks[t];}))return i;}
+    }
+    return -1;
+  }
+  function inServer(name,pool){return who(name,pool)!==-1;}
+  window.__apexInServer={build:build,inServer:inServer,who:who};
+  if(typeof document==="undefined")return;
+  var pool=null,busy=false;
+  function clean(){
+    if(!pool||busy)return;busy=true;
+    var table=document.getElementById("jobsTable");
+    if(table){
+      var best={};
+      [].slice.call(table.querySelectorAll(".jr:not(.hd)")).forEach(function(r){
+        var b=r.querySelector("b");if(!b)return;
+        var w=who(b.textContent,pool);
+        if(w===-1){r.remove();return;}
+        if(w<0)return;
+        var filled=[].slice.call(r.querySelectorAll("span")).filter(function(s){return s.textContent.trim()!=="\u2014";}).length;
+        var o=best[w];
+        if(!o){best[w]={row:r,filled:filled};}
+        else if(filled>o.filled){o.row.remove();best[w]={row:r,filled:filled};}
+        else{r.remove();}
+      });
+      var c=document.getElementById("jobCount");
+      if(c)c.textContent=table.querySelectorAll(".jr:not(.hd)").length+" drivers";
+    }
+    var dl=document.getElementById("dlist");
+    if(dl){
+      [].slice.call(dl.querySelectorAll(".dcard")).forEach(function(d){
+        var b=d.querySelector("b");if(b&&!inServer(b.textContent,pool))d.remove();
+      });
+      [].slice.call(dl.querySelectorAll(".dgroup")).forEach(function(g){
+        if(!g.querySelector(".dcard"))g.remove();
+      });
+      var q=document.getElementById("dq");
+      if(q)q.dispatchEvent(new Event("input"));
+    }
+    var sc=document.querySelectorAll(".scard");
+    if(sc.length){
+      sc.forEach(function(s){
+        var b=s.querySelector(".sname");if(b&&!inServer(b.textContent,pool))s.remove();
+      });
+      [].slice.call(document.querySelectorAll(".sgrid")).forEach(function(g){
+        if(!g.querySelector(".scard")){var t=g.previousElementSibling;if(t&&t.classList.contains("stier"))t.remove();g.remove();}
+      });
+      var tot=document.querySelector("#crew .sub b");
+      if(tot&&/Total staff/.test(tot.textContent))tot.textContent="Total staff on board: "+document.querySelectorAll(".scard").length;
+    }
+    busy=false;
+  }
+  fetch("members.json?v="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var list=(d.members||[]).concat(d.visitors||[]);
+      if(!list.length)return;
+      pool=build(list);
+      clean();
+      var table=document.getElementById("jobsTable");
+      if(table)new MutationObserver(clean).observe(table,{childList:true});
+    })
+    .catch(function(){/* members.json missing: nothing is hidden */});
+})();
+</script>
+
 </body>
 </html>
