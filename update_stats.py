@@ -24,6 +24,7 @@ MAX_SECONDS = int(os.environ.get("MAX_SECONDS", "1500"))
 SCHEMA = 4   # raised so every old screenshot is read again with the fixed rules
 MAX_SPEED = 300   # km per hour, the game allows fast average speeds
 MAX_LEVEL = 999   # the game has no level above this, anything higher is a misread
+LEVEL_DROP = 2    # a reading just below the earlier level is kept as the screenshot showed it
 LEVEL_JUMP = 40   # a level this far from the driver's other levels is a misread
 
 # Job cards are posted to the output channel only for messages newer than this ID
@@ -679,6 +680,10 @@ def fix_levels_once(jobs):
         if j.get("level_est"):  # estimates are made again on every run
             j.pop("level_est", None)
             j.pop("level_now", None)
+        first = level_from_text(j.get("level_raw")) if j.get("level_raw") else None
+        if first:  # start again from the number the screenshot gave, so an old repair never stacks up
+            j["level"] = j["level_raw"]
+            j["level_now"] = first
         by_author.setdefault(j["author"], []).append(j)
     for items in by_author.values():
         vals = [j.get("level_now") or level_from_text(j.get("level")) for j in items]
@@ -695,6 +700,12 @@ def fix_levels_once(jobs):
             before = [vals[k] for k in range(i - 1, -1, -1) if k in keep][:1]
             after = [vals[k] for k in range(i + 1, len(items)) if k in keep][:1]
             raw = j.get("level_now") or level_from_text(j.get("level"))
+            shown = level_from_text(j.get("level_raw")) or raw  # the number the screenshot first gave
+            if before and 0 < before[0] - shown <= LEVEL_DROP:  # never invent a higher level for a small drop
+                j.setdefault("level_raw", j.get("level"))
+                j["level"] = "{} to {}".format(shown, shown + 1)
+                j["level_now"] = shown
+                continue
             if before and after:
                 low, high = before[0], after[0]
             elif before:
