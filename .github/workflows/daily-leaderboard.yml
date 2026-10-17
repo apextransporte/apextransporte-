@@ -1,0 +1,32 @@
+name: Daily leaderboard
+
+on:
+  schedule:
+    - cron: "25 22 * * *"   # every day at 22:25 UTC, 01:25 in Uganda
+  workflow_dispatch:         # lets you press Run workflow to post now
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-leaderboard
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the latest files
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Post the leaderboard
+        env:
+          LEADERBOARD_WEBHOOK: ${{ secrets.LEADERBOARD_WEBHOOK }}
+        run: python daily_leaderboard.py
